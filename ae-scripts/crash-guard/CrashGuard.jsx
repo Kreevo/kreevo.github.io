@@ -1,22 +1,28 @@
 // Crash Guard by Kreevo
 // ScriptUI dockable panel for After Effects — versioned auto-backup,
 // live system load monitor, pre-render health check, project cleaner.
-// v1.0 — native-controls rebuild (custom-drawn buttons/tabs were not
+// v1.1 — native-controls rebuild (custom-drawn buttons/tabs were not
 // rendering reliably; this build uses ScriptUI's built-in controls,
 // which are OS-drawn and always visible, at the cost of some styling).
+// Palette matches kreevo.github.io's actual brand system (near-black
+// surfaces, single green accent) rather than an invented one.
 
 (function (thisObj) {
 
     // ---------------------------------------------------------------
-    // BRAND
+    // BRAND — matches kreevo.github.io: near-black surfaces, white
+    // text, and a single accent color (#4ade80) used across the real
+    // site for positive/brand touches. The site has no warning color
+    // of its own (green can't mean both "good" and "CPU is on fire"),
+    // so BRAND.warn is a separate color used only for load/heat alerts.
     // ---------------------------------------------------------------
     var BRAND = {
-        bg:       [0x2E / 255, 0x4A / 255, 0x3A / 255],
-        card:     [0x3D / 255, 0x5C / 255, 0x48 / 255],
-        accent:   [0xD8 / 255, 0x5A / 255, 0x30 / 255],
-        text:     [0xF5 / 255, 0xF2 / 255, 0xE3 / 255],
-        muted:    [0xB8 / 255, 0xC4 / 255, 0xB5 / 255],
-        border:   [0x1C / 255, 0x2E / 255, 0x22 / 255]
+        bg:       [0x14 / 255, 0x14 / 255, 0x14 / 255],
+        card:     [0x1E / 255, 0x1E / 255, 0x1E / 255],
+        accent:   [0x4A / 255, 0xDE / 255, 0x80 / 255],
+        warn:     [0xF8 / 255, 0x71 / 255, 0x71 / 255],
+        text:     [0xFF / 255, 0xFF / 255, 0xFF / 255],
+        muted:    [0x9E / 255, 0x9E / 255, 0x9E / 255]
     };
 
     function getBestFont() {
@@ -35,7 +41,6 @@
     var SETTINGS_FILE = new File(BASE_DIR + "/settings.txt");
     var HISTORY_FILE = new File(BASE_DIR + "/history.log");
     var SESSION_MARKER = new File(BASE_DIR + "/session.lock");
-    var LOGO_CACHE_FILE = new File(BASE_DIR + "/logo_cache.png");
     var LAST_STATE_FILE = new File(BASE_DIR + "/last_state.txt");
     var CPU_RAM_PS1_FILE = new File(BASE_DIR + "/cg_cpu_ram.ps1");
     var TEMP_PS1_FILE = new File(BASE_DIR + "/cg_temp.ps1");
@@ -46,49 +51,6 @@
             if (!f.exists) f.create();
         } catch (e) {}
     }
-
-    // ---------------------------------------------------------------
-    // LOGO — embedded as base64 so the whole panel ships as one .jsx.
-    // Baked at its exact display size (36x36); ScriptUI's image control
-    // draws pixels 1:1 rather than scaling to a bounding box.
-    // ---------------------------------------------------------------
-    var LOGO_BASE64 =
-        "iVBORw0KGgoAAAANSUhEUgAAACQAAAAkCAYAAADhAJiYAAACrUlEQVR4nO2UT4scVRTFz7mvuqu7qtsoZECdCBElOxfqMpDEnRtBXMzWjaDiymVAmPkEZuHCpYsggcmHmMGQneIqIQSGpGdaBpPMTP+pnuqqrnrHRfdgcBG7kglkUT94UDzq1Tl1370HqKmpqal5tWHVA5IIbLt/d64AQElSkhwAYnt7sQ2QnxQvbvM5mBt9cYIqgvMq/BWNh/n3zUb4rofMmXsyK+0ayf002f202e58nh1PgkYjtFme77S7/kfgnSlIENBpmD4xFADAaND7Vkolfyj5I0lSMuhdPTzcOTMZ7SVSKmm4WJmSpP8hAGxubrpnK8xZukInONrbQFlOxskMoHNBRpp9HbJ5SZImoycFoLIVxY1s+uhWvJ/elWQky5diSFIBwAEQIEIlAXVAXjGak2TmAiuKIneyb3jhQibJlv3+0i/+94QExXHkWvGKeXINwG/tzmpD8mpFHZtNj39ovbZ6b2trKyDpK+v8Hyc9lIx216Wxjsf9cpY//iMZ7X4FAGnaey+fPrqeTw8mk+HeHUlOklWdvsoVokhAMONBkef9Isv/BICdnfFeOhndyPP0ruDvz3vmJklWmqzKPTTHUBR+aOSl7pnXfx8Meu8HwJqZ+87D9wWeGx08vEiev71o6KWvrHpTU1oE/KqXnwlAg/aLqPMg3qTwBsEhw8bPg0HvMoDBSYYt96sVoWiALwE5gJ0smxagPiZ4FjRKaAlaacfdD5zx2tzIzZc3ZSQyoOPCsNkMmw2LOquBF34y8rN2fNaiKLIoageaZeh0V75Mjh5+RK6V0ikH48bGhpfENN3/NU//vujl35IXfPb4sGm6HnbP3UkGvautOP4in2ZmzjnmRw8UhP3FpJ3+6D+LKuF32sJ8WlySaX3dFs/u6dx5nhyqqampqXnV+QfXWHeeZJE1yQAAAABJRU5ErkJggg==";
-
-    function base64Decode(b64) {
-        var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
-        var output = "";
-        var i = 0;
-        while (i < b64.length) {
-            var e1 = chars.indexOf(b64.charAt(i++));
-            var e2 = chars.indexOf(b64.charAt(i++));
-            var e3 = chars.indexOf(b64.charAt(i++));
-            var e4 = chars.indexOf(b64.charAt(i++));
-            var c1 = (e1 << 2) | (e2 >> 4);
-            var c2 = ((e2 & 15) << 4) | (e3 >> 2);
-            var c3 = ((e3 & 3) << 6) | e4;
-            output += String.fromCharCode(c1);
-            if (e3 !== 64) output += String.fromCharCode(c2);
-            if (e4 !== 64) output += String.fromCharCode(c3);
-        }
-        return output;
-    }
-
-    function getLogoFile() {
-        try {
-            if (!LOGO_CACHE_FILE.exists) {
-                ensureBaseDir();
-                LOGO_CACHE_FILE.encoding = "BINARY";
-                LOGO_CACHE_FILE.open("w");
-                LOGO_CACHE_FILE.write(base64Decode(LOGO_BASE64));
-                LOGO_CACHE_FILE.close();
-            }
-            return LOGO_CACHE_FILE.exists ? LOGO_CACHE_FILE : null;
-        } catch (e) {
-            return null;
-        }
-    }
-    var LOGO_FILE = getLogoFile();
 
     // ---------------------------------------------------------------
     // SETTINGS — plain "key=value" lines, no eval, no JSON dependency.
@@ -665,7 +627,7 @@
     function nativeButton(parent, label, onClick) {
         var b = parent.add("button", undefined, label);
         b.alignment = ["fill", "top"];
-        try { b.graphics.font = ScriptUI.newFont(FONT, "BOLD", 13); } catch (e) {}
+        try { b.graphics.font = ScriptUI.newFont(FONT, "BOLD", 14); } catch (e) {}
         b.onClick = onClick;
         return b;
     }
@@ -674,22 +636,12 @@
         var c = parent.add("group");
         c.orientation = "column";
         c.alignChildren = ["fill", "top"];
-        c.spacing = 8;
-        c.margins = 12;
+        c.spacing = 10;
+        c.margins = 14;
         try {
             c.graphics.backgroundColor = c.graphics.newBrush(c.graphics.BrushType.SOLID_COLOR, BRAND.card);
         } catch (e) {}
         return c;
-    }
-
-    function divider(parent) {
-        var d = parent.add("group");
-        d.minimumSize.height = 1;
-        d.maximumSize.height = 1;
-        try {
-            d.graphics.backgroundColor = d.graphics.newBrush(d.graphics.BrushType.SOLID_COLOR, BRAND.border);
-        } catch (e) {}
-        return d;
     }
 
     // ---------------------------------------------------------------
@@ -708,14 +660,14 @@
             if (cpuValueText) {
                 cpuValueText.text = (cpu === null) ? "—" : (cpu + "%");
                 try {
-                    var cpuColor = (cpu !== null && cpu >= 85) ? BRAND.accent : BRAND.text;
+                    var cpuColor = (cpu !== null && cpu >= 85) ? BRAND.warn : BRAND.text;
                     cpuValueText.graphics.foregroundColor = cpuValueText.graphics.newPen(cpuValueText.graphics.PenType.SOLID_COLOR, cpuColor, 1);
                 } catch (e) {}
             }
             if (cpuBarText) {
                 cpuBarText.text = textBar(cpu);
                 try {
-                    var cbColor = (cpu !== null && cpu >= 85) ? BRAND.accent : BRAND.muted;
+                    var cbColor = (cpu !== null && cpu >= 85) ? BRAND.warn : BRAND.muted;
                     cpuBarText.graphics.foregroundColor = cpuBarText.graphics.newPen(cpuBarText.graphics.PenType.SOLID_COLOR, cbColor, 1);
                 } catch (e) {}
             }
@@ -723,14 +675,14 @@
             if (ramValueText) {
                 ramValueText.text = (ram === null) ? "—" : (ram.percent + "%");
                 try {
-                    var ramColor = (ram !== null && ram.percent >= 85) ? BRAND.accent : BRAND.text;
+                    var ramColor = (ram !== null && ram.percent >= 85) ? BRAND.warn : BRAND.text;
                     ramValueText.graphics.foregroundColor = ramValueText.graphics.newPen(ramValueText.graphics.PenType.SOLID_COLOR, ramColor, 1);
                 } catch (e) {}
             }
             if (ramBarText) {
                 ramBarText.text = textBar(ram === null ? null : ram.percent);
                 try {
-                    var rbColor = (ram !== null && ram.percent >= 85) ? BRAND.accent : BRAND.muted;
+                    var rbColor = (ram !== null && ram.percent >= 85) ? BRAND.warn : BRAND.muted;
                     ramBarText.graphics.foregroundColor = ramBarText.graphics.newPen(ramBarText.graphics.PenType.SOLID_COLOR, rbColor, 1);
                 } catch (e) {}
             }
@@ -769,12 +721,12 @@
         w.preferredSize = [440, 380];
         try { w.graphics.backgroundColor = w.graphics.newBrush(w.graphics.BrushType.SOLID_COLOR, BRAND.bg); } catch (e) {}
 
-        styledText(w, "BACKUP & ISSUE HISTORY", 13, "BOLD", BRAND.muted);
+        styledText(w, "BACKUP & ISSUE HISTORY", 14, "BOLD", BRAND.muted);
 
         var box = w.add("edittext", undefined, readHistoryTail(300), { multiline: true, readonly: true, scrollable: true });
         box.alignment = ["fill", "fill"];
         try {
-            box.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 12);
+            box.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 13);
             box.graphics.foregroundColor = box.graphics.newPen(box.graphics.PenType.SOLID_COLOR, BRAND.text, 1);
             box.graphics.backgroundColor = box.graphics.newBrush(box.graphics.BrushType.SOLID_COLOR, BRAND.card);
         } catch (e) {}
@@ -800,8 +752,8 @@
             win.margins = 20;
             win.spacing = 10;
             try { win.graphics.backgroundColor = win.graphics.newBrush(win.graphics.BrushType.SOLID_COLOR, BRAND.bg); } catch (e2) {}
-            styledText(win, "Crash Guard couldn't start", 15, "BOLD", BRAND.accent);
-            var msg = styledText(win, String(err), 12, "REGULAR", BRAND.text, true);
+            styledText(win, "Crash Guard couldn't start", 16, "BOLD", BRAND.warn);
+            var msg = styledText(win, String(err), 13, "REGULAR", BRAND.text, true);
             msg.preferredSize = [340, 100];
             try { win.layout.layout(true); } catch (e3) {}
             return win;
@@ -815,25 +767,31 @@
 
         win.orientation = "column";
         win.alignChildren = ["fill", "top"];
-        win.spacing = 8;
-        win.margins = 14;
-        win.preferredSize.width = 360;
+        win.spacing = 10;
+        win.margins = 18;
+        win.preferredSize.width = 390;
 
         try { win.graphics.backgroundColor = win.graphics.newBrush(win.graphics.BrushType.SOLID_COLOR, BRAND.bg); } catch (e) {}
 
-        // ---- Header ----
+        // ---- Header — a small accent-color mark + bold text wordmark.
+        // No raster image: a bitmap logo baked at one fixed pixel size
+        // looks soft/blurry once ScriptUI scales the panel on a high-DPI
+        // display, while text stays crisp at any size — and it matches
+        // kreevo.github.io, which itself uses a text wordmark, not an icon. ----
         var header = win.add("group");
         header.orientation = "row";
         header.alignChildren = ["left", "center"];
         header.spacing = 10;
 
-        if (LOGO_FILE) {
-            try { header.add("image", undefined, LOGO_FILE); } catch (e) {}
-        }
-        styledText(header, "CRASH GUARD", 16, "BOLD", BRAND.text);
+        var mark = header.add("group");
+        mark.minimumSize.width = mark.maximumSize.width = 10;
+        mark.minimumSize.height = mark.maximumSize.height = 10;
+        try { mark.graphics.backgroundColor = mark.graphics.newBrush(mark.graphics.BrushType.SOLID_COLOR, BRAND.accent); } catch (e) {}
+
+        styledText(header, "CRASH GUARD", 20, "BOLD", BRAND.text);
         var spacer = header.add("group");
         spacer.alignment = ["fill", "fill"];
-        styledText(header, "by Kreevo", 11, "BOLD", BRAND.accent);
+        styledText(header, "by Kreevo", 12, "BOLD", BRAND.accent);
 
         if (possibleCrashDetected) {
             var crashLines = ["⚠ Last session didn't close cleanly — possible crash or freeze."];
@@ -843,9 +801,9 @@
                     (lastKnownStateAtStartup.TIME ? " (" + lastKnownStateAtStartup.TIME + ")" : ""));
             }
             crashLines.push("See BACKUP tab to restore.");
-            var crashBanner = styledText(win, crashLines.join("\n"), 12, "REGULAR", BRAND.accent, true);
+            var crashBanner = styledText(win, crashLines.join("\n"), 13, "REGULAR", BRAND.warn, true);
             crashBanner.alignment = ["fill", "top"];
-            crashBanner.minimumSize.height = lastKnownStateAtStartup ? 52 : 34;
+            crashBanner.minimumSize.height = lastKnownStateAtStartup ? 58 : 38;
         }
 
         // ---- Native tabbed panel: guaranteed to render and switch,
@@ -857,26 +815,26 @@
         var monitorTab = tabs.add("tab", undefined, "Monitor");
         monitorTab.orientation = "column";
         monitorTab.alignChildren = ["fill", "top"];
-        monitorTab.spacing = 8;
-        monitorTab.margins = 10;
+        monitorTab.spacing = 10;
+        monitorTab.margins = 12;
 
         var backupTab = tabs.add("tab", undefined, "Backup");
         backupTab.orientation = "column";
         backupTab.alignChildren = ["fill", "top"];
-        backupTab.spacing = 8;
-        backupTab.margins = 10;
+        backupTab.spacing = 10;
+        backupTab.margins = 12;
 
         var cleanerTab = tabs.add("tab", undefined, "Cleaner");
         cleanerTab.orientation = "column";
         cleanerTab.alignChildren = ["fill", "top"];
-        cleanerTab.spacing = 8;
-        cleanerTab.margins = 10;
+        cleanerTab.spacing = 10;
+        cleanerTab.margins = 12;
 
         tabs.selection = monitorTab;
 
         // ================= MONITOR TAB =================
         var loadCard = card(monitorTab);
-        styledText(loadCard, "WHY AE MIGHT BE LAGGING", 12, "BOLD", BRAND.muted);
+        styledText(loadCard, "WHY AE MIGHT BE LAGGING", 13, "BOLD", BRAND.muted);
 
         var statsRow = loadCard.add("group");
         statsRow.orientation = "row";
@@ -887,20 +845,20 @@
         cpuCol.orientation = "column";
         cpuCol.alignChildren = ["fill", "top"];
         cpuCol.alignment = ["fill", "top"];
-        cpuCol.spacing = 2;
-        styledText(cpuCol, "CPU", 11, "BOLD", BRAND.muted);
-        cpuValueText = styledText(cpuCol, "—", 26, "BOLD", BRAND.text);
-        cpuBarText = styledText(cpuCol, textBar(null), 13, "REGULAR", BRAND.muted);
+        cpuCol.spacing = 3;
+        styledText(cpuCol, "CPU", 12, "BOLD", BRAND.muted);
+        cpuValueText = styledText(cpuCol, "—", 34, "BOLD", BRAND.text);
+        cpuBarText = styledText(cpuCol, textBar(null), 14, "REGULAR", BRAND.muted);
 
         var ramCol = statsRow.add("group");
         ramCol.orientation = "column";
         ramCol.alignChildren = ["fill", "top"];
         ramCol.alignment = ["fill", "top"];
-        ramCol.spacing = 2;
-        styledText(ramCol, "RAM", 11, "BOLD", BRAND.muted);
-        ramValueText = styledText(ramCol, "—", 26, "BOLD", BRAND.text);
-        ramBarText = styledText(ramCol, textBar(null), 13, "REGULAR", BRAND.muted);
-        ramSubText = styledText(ramCol, "", 11, "REGULAR", BRAND.muted);
+        ramCol.spacing = 3;
+        styledText(ramCol, "RAM", 12, "BOLD", BRAND.muted);
+        ramValueText = styledText(ramCol, "—", 34, "BOLD", BRAND.text);
+        ramBarText = styledText(ramCol, textBar(null), 14, "REGULAR", BRAND.muted);
+        ramSubText = styledText(ramCol, "", 12, "REGULAR", BRAND.muted);
 
         var tempRow = loadCard.add("group");
         tempRow.orientation = "row";
@@ -911,26 +869,26 @@
         tempCol.orientation = "column";
         tempCol.alignChildren = ["left", "top"];
         tempCol.alignment = ["fill", "top"];
-        styledText(tempCol, "CPU TEMP", 11, "BOLD", BRAND.muted);
-        tempValueText = styledText(tempCol, "Tap \"Refresh temperatures\" below", 12, "ITALIC", BRAND.muted, true);
+        styledText(tempCol, "CPU TEMP", 12, "BOLD", BRAND.muted);
+        tempValueText = styledText(tempCol, "Tap \"Refresh temperatures\" below", 13, "ITALIC", BRAND.muted, true);
         tempValueText.alignment = ["fill", "top"];
-        tempValueText.minimumSize.height = 30;
+        tempValueText.minimumSize.height = 32;
 
         var gpuCol = tempRow.add("group");
         gpuCol.orientation = "column";
         gpuCol.alignChildren = ["left", "top"];
         gpuCol.alignment = ["fill", "top"];
-        styledText(gpuCol, "GPU TEMP", 11, "BOLD", BRAND.muted);
-        gpuValueText = styledText(gpuCol, "Tap \"Refresh temperatures\" below", 12, "ITALIC", BRAND.muted, true);
+        styledText(gpuCol, "GPU TEMP", 12, "BOLD", BRAND.muted);
+        gpuValueText = styledText(gpuCol, "Tap \"Refresh temperatures\" below", 13, "ITALIC", BRAND.muted, true);
         gpuValueText.alignment = ["fill", "top"];
-        gpuValueText.minimumSize.height = 30;
+        gpuValueText.minimumSize.height = 32;
 
         explanationText = loadCard.add("statictext", undefined, "", { multiline: true });
         explanationText.alignment = ["fill", "top"];
-        explanationText.minimumSize.height = 44;
+        explanationText.minimumSize.height = 46;
         try {
-            explanationText.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 12);
-            explanationText.graphics.foregroundColor = explanationText.graphics.newPen(explanationText.graphics.PenType.SOLID_COLOR, BRAND.accent, 1);
+            explanationText.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 13);
+            explanationText.graphics.foregroundColor = explanationText.graphics.newPen(explanationText.graphics.PenType.SOLID_COLOR, BRAND.warn, 1);
         } catch (e) {}
 
         nativeButton(monitorTab, "Check before I render", function () { checkRenderReadiness(true); });
@@ -942,36 +900,36 @@
 
         // ================= BACKUP TAB =================
         var autoCard = card(backupTab);
-        styledText(autoCard, "AUTO-BACKUP", 12, "BOLD", BRAND.muted);
+        styledText(autoCard, "AUTO-BACKUP", 13, "BOLD", BRAND.muted);
         var backupExplain = styledText(autoCard,
             "Saves a timestamped copy into \"Kreevo_Backups\" next to your project — restore any version below if AE crashes or you lose work.",
-            11, "REGULAR", BRAND.muted, true);
+            12, "REGULAR", BRAND.muted, true);
         backupExplain.alignment = ["fill", "top"];
-        backupExplain.minimumSize.height = 32;
+        backupExplain.minimumSize.height = 34;
 
         var enableRow = autoCard.add("group");
         enableRow.orientation = "row";
         enableRow.alignChildren = ["left", "center"];
         var enableCheck = enableRow.add("checkbox", undefined, "  Enabled — protecting your work");
         enableCheck.value = settings.enabled;
-        try { enableCheck.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 13); } catch (e) {}
+        try { enableCheck.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 14); } catch (e) {}
 
         var intervalRow = autoCard.add("group");
         intervalRow.orientation = "row";
         intervalRow.alignChildren = ["left", "center"];
         intervalRow.spacing = 8;
-        styledText(intervalRow, "Every", 13, "REGULAR", BRAND.muted);
+        styledText(intervalRow, "Every", 14, "REGULAR", BRAND.muted);
         var intervalInput = intervalRow.add("edittext", undefined, String(settings.intervalMinutes));
         intervalInput.characters = 4;
-        try { intervalInput.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 13); } catch (e) {}
-        styledText(intervalRow, "min", 13, "REGULAR", BRAND.muted);
-        styledText(intervalRow, "   Keep last", 13, "REGULAR", BRAND.muted);
+        try { intervalInput.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 14); } catch (e) {}
+        styledText(intervalRow, "min", 14, "REGULAR", BRAND.muted);
+        styledText(intervalRow, "   Keep last", 14, "REGULAR", BRAND.muted);
         var maxBackupsInput = intervalRow.add("edittext", undefined, String(settings.maxBackups));
         maxBackupsInput.characters = 4;
-        try { maxBackupsInput.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 13); } catch (e) {}
+        try { maxBackupsInput.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 14); } catch (e) {}
 
-        statusText = styledText(autoCard, settings.enabled ? "Auto-backup on" : "Auto-backup off", 12, "REGULAR", BRAND.muted);
-        backupAgoText = styledText(autoCard, "No backup yet this session", 12, "REGULAR", BRAND.muted);
+        statusText = styledText(autoCard, settings.enabled ? "Auto-backup on" : "Auto-backup off", 13, "REGULAR", BRAND.muted);
+        backupAgoText = styledText(autoCard, "No backup yet this session", 13, "REGULAR", BRAND.muted);
 
         function applySettingsFromUI() {
             settings.enabled = enableCheck.value;
@@ -1011,18 +969,18 @@
         nativeButton(actions, "View history log", showHistoryWindow);
 
         var restoreCard = card(backupTab);
-        styledText(restoreCard, "RECENT BACKUPS", 12, "BOLD", BRAND.muted);
-        var restoreExplain = styledText(restoreCard, "Pick a version and restore it if something goes wrong.", 11, "REGULAR", BRAND.muted, true);
+        styledText(restoreCard, "RECENT BACKUPS", 13, "BOLD", BRAND.muted);
+        var restoreExplain = styledText(restoreCard, "Pick a version and restore it if something goes wrong.", 12, "REGULAR", BRAND.muted, true);
         restoreExplain.alignment = ["fill", "top"];
-        restoreExplain.minimumSize.height = 16;
+        restoreExplain.minimumSize.height = 17;
 
         var backupDropdown = restoreCard.add("dropdownlist", undefined, []);
         backupDropdown.alignment = ["fill", "top"];
-        try { backupDropdown.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 13); } catch (e) {}
+        try { backupDropdown.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 14); } catch (e) {}
 
         // Shown only when the list comes back empty, so an empty dropdown
         // never looks like it silently failed — it always says why.
-        var restoreStatusText = styledText(restoreCard, "", 11, "ITALIC", BRAND.accent, true);
+        var restoreStatusText = styledText(restoreCard, "", 12, "ITALIC", BRAND.muted, true);
         restoreStatusText.alignment = ["fill", "top"];
         restoreStatusText.minimumSize.height = 0;
 
@@ -1038,13 +996,13 @@
                 restoreStatusText.minimumSize.height = 0;
             } else if (!app.project) {
                 restoreStatusText.text = "No project is open.";
-                restoreStatusText.minimumSize.height = 16;
+                restoreStatusText.minimumSize.height = 17;
             } else if (!app.project.file) {
                 restoreStatusText.text = "This project isn't saved yet — use File > Save As first, so Crash Guard knows where to keep backups.";
-                restoreStatusText.minimumSize.height = 30;
+                restoreStatusText.minimumSize.height = 32;
             } else {
                 restoreStatusText.text = "No backups found yet in \"Kreevo_Backups\" next to this project.";
-                restoreStatusText.minimumSize.height = 16;
+                restoreStatusText.minimumSize.height = 17;
             }
         }
         refreshBackupList();
@@ -1066,27 +1024,27 @@
 
         // ================= CLEANER TAB =================
         var cleanCard = card(cleanerTab);
-        styledText(cleanCard, "PROJECT CLEANER", 12, "BOLD", BRAND.muted);
+        styledText(cleanCard, "PROJECT CLEANER", 13, "BOLD", BRAND.muted);
         var cleanExplain = styledText(cleanCard,
             "Housekeeping that keeps every project running smoothly — do this every so often, not just when something breaks.",
-            11, "REGULAR", BRAND.muted, true);
+            12, "REGULAR", BRAND.muted, true);
         cleanExplain.alignment = ["fill", "top"];
-        cleanExplain.minimumSize.height = 30;
+        cleanExplain.minimumSize.height = 32;
 
         nativeButton(cleanCard, "Remove unused footage", cleanerRemoveUnused);
-        var removeExplain = styledText(cleanCard, "Deletes project items nothing in your comps actually uses.", 11, "REGULAR", BRAND.muted, true);
+        var removeExplain = styledText(cleanCard, "Deletes project items nothing in your comps actually uses.", 12, "REGULAR", BRAND.muted, true);
         removeExplain.alignment = ["fill", "top"];
-        removeExplain.minimumSize.height = 16;
+        removeExplain.minimumSize.height = 17;
 
         nativeButton(cleanCard, "Consolidate duplicate footage", cleanerConsolidate);
-        var consolidateExplain = styledText(cleanCard, "Merges footage imported more than once into a single item.", 11, "REGULAR", BRAND.muted, true);
+        var consolidateExplain = styledText(cleanCard, "Merges footage imported more than once into a single item.", 12, "REGULAR", BRAND.muted, true);
         consolidateExplain.alignment = ["fill", "top"];
-        consolidateExplain.minimumSize.height = 16;
+        consolidateExplain.minimumSize.height = 17;
 
         nativeButton(cleanCard, "Purge memory and disk caches", cleanerPurge);
-        var purgeExplain = styledText(cleanCard, "Frees up RAM immediately — use this when the Monitor tab shows RAM running high.", 11, "REGULAR", BRAND.muted, true);
+        var purgeExplain = styledText(cleanCard, "Frees up RAM immediately — use this when the Monitor tab shows RAM running high.", 12, "REGULAR", BRAND.muted, true);
         purgeExplain.alignment = ["fill", "top"];
-        purgeExplain.minimumSize.height = 30;
+        purgeExplain.minimumSize.height = 32;
 
         // ---- wire up ----
         win.layout.layout(true);
