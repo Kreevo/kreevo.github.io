@@ -1,7 +1,7 @@
 // Crash Guard by Kreevo
 // ScriptUI dockable panel for After Effects — versioned auto-backup,
-// live system load monitor, pre-render health check, crash history log.
-// v2.1.0 — single-file build, larger UI, hardened system-stats reading
+// live system load monitor, pre-render health check, project cleaner.
+// v1.0 — tabbed layout rebuild
 
 (function (thisObj) {
 
@@ -33,8 +33,14 @@
     var HISTORY_FILE = new File(BASE_DIR + "/history.log");
     var SESSION_MARKER = new File(BASE_DIR + "/session.lock");
     var LOGO_CACHE_FILE = new File(BASE_DIR + "/logo_cache.png");
-    var STATS_PS1_FILE = new File(BASE_DIR + "/stats.ps1");
     var LAST_STATE_FILE = new File(BASE_DIR + "/last_state.txt");
+    // Separate, single-purpose PowerShell scripts — one metric per file.
+    // A single combined multi-line script proved unreliable: only its
+    // first output line consistently made it back through callSystem
+    // (CPU showed up, RAM/temp never did). Splitting removes that risk.
+    var CPU_PS1_FILE = new File(BASE_DIR + "/cg_cpu.ps1");
+    var RAM_PS1_FILE = new File(BASE_DIR + "/cg_ram.ps1");
+    var TEMP_PS1_FILE = new File(BASE_DIR + "/cg_temp.ps1");
 
     function ensureBaseDir() {
         try {
@@ -48,8 +54,7 @@
     // with nothing else to install or place in a folder. Baked at the
     // exact pixel size it's shown at (36x36) — ScriptUI's "image"
     // control does NOT scale its contents to fit a bounding box, it
-    // draws pixels 1:1, so shipping a mismatched size is what cropped
-    // the logo before. Decoded once into a small cache file (ScriptUI
+    // draws pixels 1:1. Decoded once into a small cache file (ScriptUI
     // needs a real file on disk, not raw bytes), then reused after.
     // ---------------------------------------------------------------
     var LOGO_BASE64 =
@@ -267,83 +272,82 @@
         }
     }
 
-    function trimSplitLines(s) {
-        var raw = s.split(/\r?\n/);
-        var out = [];
-        for (var i = 0; i < raw.length; i++) {
-            var t = raw[i].replace(/^\s+|\s+$/g, "");
-            if (t.length) out.push(t);
-        }
-        return out;
+    function firstNumber(s) {
+        if (!s) return null;
+        var m = s.match(/-?\d+(\.\d+)?/);
+        if (!m) return null;
+        var n = parseFloat(m[0]);
+        return isNaN(n) ? null : n;
     }
 
-    // Windows stats go through a small .ps1 file on disk rather than an
-    // inline "powershell -Command "...."" string — a quoted, semicolon-
-    // separated inline command proved unreliable through system.callSystem
-    // on real machines (it silently returned nothing), while a plain
-    // script file with a simple "-File" call is far more robust and only
-    // costs one PowerShell launch per refresh instead of three.
-    function ensureStatsScript() {
+    function writeScriptOnce(file, content) {
         try {
-            if (STATS_PS1_FILE.exists) return true;
+            if (file.exists) return true;
             ensureBaseDir();
-            var lines = [
-                "$ErrorActionPreference = 'SilentlyContinue'",
-                "$cpu = (Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average",
-                "Write-Output (\"CPU=\" + $cpu)",
-                "$os = Get-CimInstance Win32_OperatingSystem",
-                "Write-Output (\"FREE=\" + $os.FreePhysicalMemory)",
-                "Write-Output (\"TOTAL=\" + $os.TotalVisibleMemorySize)",
-                "$temp = $null",
-                "try { $temp = (Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature | Select-Object -First 1 -ExpandProperty CurrentTemperature) } catch {}",
-                "Write-Output (\"TEMP=\" + $temp)"
-            ];
-            STATS_PS1_FILE.open("w");
-            STATS_PS1_FILE.write(lines.join("\r\n"));
-            STATS_PS1_FILE.close();
-            return STATS_PS1_FILE.exists;
+            file.open("w");
+            file.write(content);
+            file.close();
+            return file.exists;
         } catch (e) {
             return false;
         }
     }
 
-    function parseKeyValueOutput(out) {
-        var result = {};
-        var lines = trimSplitLines(out);
-        for (var i = 0; i < lines.length; i++) {
-            var m = lines[i].match(/^(CPU|FREE|TOTAL|TEMP)=(.*)$/);
-            if (m) result[m[1]] = m[2];
-        }
-        return result;
+    function runPS1(file, content) {
+        if (!writeScriptOnce(file, content)) return null;
+        var cmd = 'powershell -NoProfile -ExecutionPolicy Bypass -File "' + file.fsName + '"';
+        return runSystemCommand(cmd);
     }
 
-    function getWindowsStatsViaPowerShell() {
-        if (!ensureStatsScript()) return null;
-        var cmd = 'powershell -NoProfile -ExecutionPolicy Bypass -File "' + STATS_PS1_FILE.fsName + '"';
-        var out = runSystemCommand(cmd);
-        if (!out) return null;
-        var result = parseKeyValueOutput(out);
-        return (result.CPU !== undefined || result.FREE !== undefined) ? result : null;
+    function getWindowsCPU() {
+        var out = runPS1(CPU_PS1_FILE, "(Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average\r\n");
+        var n = firstNumber(out);
+        if (n !== null) return Math.round(n);
+        // Fallback for machines where PowerShell is restricted; wmic is
+        // deprecated on newest Windows builds, so this is second choice.
+        var wmicOut = runSystemCommand("wmic cpu get loadpercentage");
+        n = firstNumber(wmicOut);
+        return n === null ? null : Math.round(n);
     }
 
-    // Fallback for machines where PowerShell is restricted/unavailable.
-    // wmic is deprecated on newest Windows builds, so this is only a
-    // second line of defense, not the primary path.
-    function getWindowsStatsViaWmic() {
-        var result = {};
-        var cpuOut = runSystemCommand("wmic cpu get loadpercentage");
-        if (cpuOut) {
-            var m = cpuOut.match(/(\d+)/);
-            if (m) result.CPU = m[1];
+    function getWindowsRAM() {
+        var out = runPS1(RAM_PS1_FILE,
+            "$os = Get-CimInstance Win32_OperatingSystem\r\nWrite-Output $os.FreePhysicalMemory\r\nWrite-Output $os.TotalVisibleMemorySize\r\n");
+        var freeKB = null, totalKB = null;
+        if (out) {
+            var lines = out.split(/\r?\n/);
+            var nums = [];
+            for (var i = 0; i < lines.length; i++) {
+                var n = firstNumber(lines[i]);
+                if (n !== null) nums.push(n);
+            }
+            if (nums.length >= 2) { freeKB = nums[0]; totalKB = nums[1]; }
         }
-        var memOut = runSystemCommand("wmic OS get FreePhysicalMemory,TotalVisibleMemorySize /Value");
-        if (memOut) {
-            var fm = memOut.match(/FreePhysicalMemory=(\d+)/);
-            var tm = memOut.match(/TotalVisibleMemorySize=(\d+)/);
-            if (fm) result.FREE = fm[1];
-            if (tm) result.TOTAL = tm[1];
+        if (freeKB === null || totalKB === null) {
+            var wmicOut = runSystemCommand("wmic OS get FreePhysicalMemory,TotalVisibleMemorySize /Value");
+            if (wmicOut) {
+                var fm = wmicOut.match(/FreePhysicalMemory=(\d+)/);
+                var tm = wmicOut.match(/TotalVisibleMemorySize=(\d+)/);
+                if (fm) freeKB = parseFloat(fm[1]);
+                if (tm) totalKB = parseFloat(tm[1]);
+            }
         }
-        return (result.CPU !== undefined || result.FREE !== undefined) ? result : null;
+        if (freeKB === null || totalKB === null || totalKB <= 0) return null;
+        var usedKB = totalKB - freeKB;
+        return {
+            percent: Math.round((usedKB / totalKB) * 100),
+            usedGB: usedKB / 1048576,
+            totalGB: totalKB / 1048576
+        };
+    }
+
+    function getWindowsTemp() {
+        var script = "$ErrorActionPreference = 'SilentlyContinue'\r\n" +
+            "(Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature | Select-Object -First 1 -ExpandProperty CurrentTemperature)\r\n";
+        var out = runPS1(TEMP_PS1_FILE, script);
+        var n = firstNumber(out);
+        if (n === null || n <= 0) return null;
+        return Math.round((n / 10) - 273.15);
     }
 
     function getMacCPULoad() {
@@ -380,35 +384,7 @@
     function readSystemStats() {
         try {
             if (IS_WIN) {
-                var raw = getWindowsStatsViaPowerShell() || getWindowsStatsViaWmic();
-                if (!raw) return { cpu: null, ram: null, temp: null };
-
-                var cpu = null;
-                if (raw.CPU !== undefined) {
-                    var n = parseFloat(raw.CPU);
-                    if (!isNaN(n)) cpu = Math.round(n);
-                }
-
-                var ram = null;
-                if (raw.FREE !== undefined && raw.TOTAL !== undefined) {
-                    var freeKB = parseFloat(raw.FREE), totalKB = parseFloat(raw.TOTAL);
-                    if (!isNaN(freeKB) && !isNaN(totalKB) && totalKB > 0) {
-                        var usedKB = totalKB - freeKB;
-                        ram = {
-                            percent: Math.round((usedKB / totalKB) * 100),
-                            usedGB: usedKB / 1048576,
-                            totalGB: totalKB / 1048576
-                        };
-                    }
-                }
-
-                var temp = null;
-                if (raw.TEMP !== undefined) {
-                    var t = parseFloat(raw.TEMP);
-                    if (!isNaN(t) && t > 0) temp = Math.round((t / 10) - 273.15);
-                }
-
-                return { cpu: cpu, ram: ram, temp: temp };
+                return { cpu: getWindowsCPU(), ram: getWindowsRAM(), temp: getWindowsTemp() };
             } else {
                 return { cpu: getMacCPULoad(), ram: getMacRAMUsage(), temp: null };
             }
@@ -420,9 +396,8 @@
     function getGPUTemp() {
         try {
             var out = runSystemCommand("nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader,nounits");
-            if (!out) return null;
-            var n = parseFloat(out);
-            return isNaN(n) ? null : Math.round(n);
+            var n = firstNumber(out);
+            return n === null ? null : Math.round(n);
         } catch (e) {
             return null;
         }
@@ -448,9 +423,9 @@
         return backupFolder;
     }
 
-    var statusText = null;
+    var statusChip = null;
     var lastBackupDate = null;
-    function setStatus(msg) { if (statusText) { try { statusText.text = msg; } catch (e) {} } }
+    function setStatus(msg) { if (statusChip) { try { statusChip.setText(msg); } catch (e) {} } }
 
     function runBackup(silent) {
         if (!(app.project && app.project.file)) {
@@ -470,7 +445,7 @@
             appendHistory("Backup saved — " + backupFile.name + " (" + app.project.numItems + " items)");
             return true;
         } catch (err) {
-            setStatus("Backup skipped — will retry next cycle");
+            setStatus("Backup skipped — retrying next cycle");
             appendHistory("Backup failed silently — will retry next cycle");
             return false;
         }
@@ -524,9 +499,50 @@
         var seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
         if (seconds < 60) return "just now";
         var minutes = Math.floor(seconds / 60);
-        if (minutes < 60) return minutes + (minutes === 1 ? " min ago" : " min ago");
+        if (minutes < 60) return minutes + " min ago";
         var hours = Math.floor(minutes / 60);
-        return hours + (hours === 1 ? " hr ago" : " hr ago");
+        return hours + " hr ago";
+    }
+
+    // ---------------------------------------------------------------
+    // PROJECT CLEANER — the housekeeping tasks every editor ends up
+    // doing by hand: drop footage nothing references, merge duplicate
+    // imports, and free the RAM/disk caches AE builds up over a session.
+    // ---------------------------------------------------------------
+    function cleanerRemoveUnused() {
+        if (!app.project) { alert("Open a project first."); return; }
+        try {
+            var before = app.project.numItems;
+            app.project.removeUnusedFootage();
+            var removed = before - app.project.numItems;
+            alert(removed > 0 ? ("Removed " + removed + " unused item(s) from the project.") : "Nothing to remove — no unused footage found.");
+            appendHistory("Cleaner: removed " + removed + " unused footage item(s).");
+        } catch (e) {
+            alert("Couldn't remove unused footage: " + e.toString());
+        }
+    }
+
+    function cleanerConsolidate() {
+        if (!app.project) { alert("Open a project first."); return; }
+        try {
+            var before = app.project.numItems;
+            app.project.consolidateFootage();
+            var merged = before - app.project.numItems;
+            alert(merged > 0 ? ("Consolidated " + merged + " duplicate footage item(s).") : "No duplicate footage found.");
+            appendHistory("Cleaner: consolidated " + merged + " duplicate footage item(s).");
+        } catch (e) {
+            alert("Couldn't consolidate footage: " + e.toString());
+        }
+    }
+
+    function cleanerPurge() {
+        try {
+            app.purge(PurgeTarget.ALL_CACHES);
+            alert("Memory and disk caches purged — this can free up RAM right away.");
+            appendHistory("Cleaner: purged all caches.");
+        } catch (e) {
+            alert("Couldn't purge caches: " + e.toString());
+        }
     }
 
     // ---------------------------------------------------------------
@@ -537,6 +553,7 @@
         var reasons = [];
         if (stats.cpu !== null && stats.cpu >= 85) reasons.push("CPU is at " + stats.cpu + "% — already maxed out.");
         if (stats.ram !== null && stats.ram.percent >= 85) reasons.push("RAM is at " + stats.ram.percent + "% — very little headroom left.");
+        if (stats.temp !== null && stats.temp >= 85) reasons.push("CPU temperature is at " + stats.temp + "°C — running hot.");
 
         if (reasons.length > 0) {
             alert("This may not be a great time to start a long render:\n\n" + reasons.join("\n") +
@@ -601,7 +618,7 @@
         var group = parent.add("group");
         group.orientation = "column";
         group.alignChildren = ["fill", "center"];
-        group.minimumSize.height = 46;
+        group.minimumSize.height = 40;
         if (fullWidth !== false) group.alignment = ["fill", "top"];
 
         var isOver = false;
@@ -615,7 +632,7 @@
         var label_ = group.add("statictext", undefined, label);
         label_.alignment = ["center", "center"];
         try {
-            label_.graphics.font = ScriptUI.newFont(FONT, "BOLD", 15);
+            label_.graphics.font = ScriptUI.newFont(FONT, "BOLD", 14);
             label_.graphics.foregroundColor = label_.graphics.newPen(label_.graphics.PenType.SOLID_COLOR, BRAND.text, 1);
         } catch (e) {}
 
@@ -626,12 +643,37 @@
         return group;
     }
 
+    // A tab: flat, switches to an accent fill when active.
+    function tabButton(parent, label, onClick) {
+        var group = parent.add("group");
+        group.orientation = "column";
+        group.alignChildren = ["fill", "center"];
+        group.alignment = ["fill", "top"];
+        group.minimumSize.height = 34;
+        group._active = false;
+        group.onDraw = function () {
+            var g = this.graphics;
+            var fill = g.newBrush(g.BrushType.SOLID_COLOR, this._active ? BRAND.accent : BRAND.card);
+            g.rectPath(0, 0, this.size[0], this.size[1]);
+            g.fillPath(fill);
+        };
+        var label_ = group.add("statictext", undefined, label);
+        label_.alignment = ["center", "center"];
+        try {
+            label_.graphics.font = ScriptUI.newFont(FONT, "BOLD", 12);
+            label_.graphics.foregroundColor = label_.graphics.newPen(label_.graphics.PenType.SOLID_COLOR, BRAND.text, 1);
+        } catch (e) {}
+        group.addEventListener("mousedown", function () { if (onClick) onClick(); });
+        group.setActive = function (a) { this._active = a; this.notify("onDraw"); };
+        return group;
+    }
+
     function card(parent) {
         var c = parent.add("group");
         c.orientation = "column";
         c.alignChildren = ["fill", "top"];
-        c.spacing = 12;
-        c.margins = 16;
+        c.spacing = 8;
+        c.margins = 12;
         try {
             c.graphics.backgroundColor = c.graphics.newBrush(c.graphics.BrushType.SOLID_COLOR, BRAND.card);
         } catch (e) {}
@@ -648,13 +690,36 @@
         return d;
     }
 
+    // Small pill-style status readout — a colored background behind
+    // short text, instead of plain text floating in empty space.
+    function chip(parent, initialText) {
+        var c = parent.add("group");
+        c.orientation = "row";
+        c.alignChildren = ["center", "center"];
+        c.alignment = ["left", "top"];
+        c.margins = [10, 5, 10, 5];
+        c.onDraw = function () {
+            var g = this.graphics;
+            var fill = g.newBrush(g.BrushType.SOLID_COLOR, BRAND.btn);
+            g.rectPath(0, 0, this.size[0], this.size[1]);
+            g.fillPath(fill);
+        };
+        var t = c.add("statictext", undefined, initialText);
+        try {
+            t.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 12);
+            t.graphics.foregroundColor = t.graphics.newPen(t.graphics.PenType.SOLID_COLOR, BRAND.text, 1);
+        } catch (e) {}
+        c.setText = function (txt) { t.text = txt; try { this.notify("onDraw"); } catch (e2) {} };
+        return c;
+    }
+
     // A flat horizontal gauge bar (0-100%). Fill turns coral past 85%
     // so danger reads at a glance, the way the big numbers above it do.
     function gaugeBar(parent) {
         var bar = parent.add("group");
         bar.alignment = ["fill", "top"];
-        bar.minimumSize.height = 10;
-        bar.maximumSize.height = 10;
+        bar.minimumSize.height = 8;
+        bar.maximumSize.height = 8;
         bar._percent = 0;
         bar._danger = false;
         bar.onDraw = function () {
@@ -685,7 +750,7 @@
     var cpuValueText = null, cpuBar = null;
     var ramValueText = null, ramSubText = null, ramBar = null;
     var tempValueText = null, gpuValueText = null, explanationText = null;
-    var backupAgoText = null;
+    var backupAgoChip = null;
 
     function updateMonitorUI() {
         try {
@@ -718,16 +783,18 @@
 
             var explanations = [];
             if (cpu !== null && cpu >= 85) explanations.push("CPU is maxed out — expect slower previews and renders right now.");
-            if (ram !== null && ram.percent >= 85) explanations.push("RAM usage is very high — this is likely why After Effects is lagging.");
+            if (ram !== null && ram.percent >= 85) explanations.push("RAM usage is very high — this is likely why After Effects is lagging. Try Purge Caches in the CLEANER tab.");
+            if (temp !== null && temp >= 85) explanations.push("CPU is running hot (" + temp + "°C) — check that vents/fans aren't blocked.");
+            if (gpuTemp !== null && gpuTemp >= 85) explanations.push("GPU is running hot (" + gpuTemp + "°C) — check cooling before a long render.");
             if (explanationText) explanationText.text = explanations.join("\n");
 
             var highNow = explanations.length > 0;
             if (highNow && !wasHighLoad) appendHistory("High load detected — " + explanations.join(" / "));
             wasHighLoad = highNow;
 
-            if (backupAgoText) {
+            if (backupAgoChip) {
                 var rel = relativeTime(lastBackupDate);
-                backupAgoText.text = rel ? ("Last backup: " + rel) : "No backup yet this session";
+                backupAgoChip.setText(rel ? ("Last backup: " + rel) : "No backup yet this session");
             }
         } catch (e) {}
     }
@@ -739,17 +806,17 @@
         var w = new Window("palette", "Crash Guard — History", undefined, { resizeable: true });
         w.orientation = "column";
         w.alignChildren = ["fill", "fill"];
-        w.spacing = 12;
-        w.margins = 18;
-        w.preferredSize = [460, 400];
+        w.spacing = 10;
+        w.margins = 16;
+        w.preferredSize = [440, 380];
         try { w.graphics.backgroundColor = w.graphics.newBrush(w.graphics.BrushType.SOLID_COLOR, BRAND.bg); } catch (e) {}
 
-        styledText(w, "BACKUP & ISSUE HISTORY", 14, "BOLD", BRAND.muted);
+        styledText(w, "BACKUP & ISSUE HISTORY", 13, "BOLD", BRAND.muted);
 
         var box = w.add("edittext", undefined, readHistoryTail(300), { multiline: true, readonly: true, scrollable: true });
         box.alignment = ["fill", "fill"];
         try {
-            box.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 13);
+            box.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 12);
             box.graphics.foregroundColor = box.graphics.newPen(box.graphics.PenType.SOLID_COLOR, BRAND.text, 1);
             box.graphics.backgroundColor = box.graphics.newBrush(box.graphics.BrushType.SOLID_COLOR, BRAND.card);
         } catch (e) {}
@@ -776,9 +843,9 @@
             win.margins = 20;
             win.spacing = 10;
             try { win.graphics.backgroundColor = win.graphics.newBrush(win.graphics.BrushType.SOLID_COLOR, BRAND.bg); } catch (e2) {}
-            styledText(win, "Crash Guard couldn't start", 16, "BOLD", BRAND.accent);
-            var msg = styledText(win, String(err), 13, "REGULAR", BRAND.text, true);
-            msg.preferredSize = [360, 100];
+            styledText(win, "Crash Guard couldn't start", 15, "BOLD", BRAND.accent);
+            var msg = styledText(win, String(err), 12, "REGULAR", BRAND.text, true);
+            msg.preferredSize = [340, 100];
             try { win.layout.layout(true); } catch (e3) {}
             return win;
         }
@@ -791,9 +858,9 @@
 
         win.orientation = "column";
         win.alignChildren = ["fill", "top"];
-        win.spacing = 14;
-        win.margins = 18;
-        win.preferredSize.width = 420;
+        win.spacing = 8;
+        win.margins = 14;
+        win.preferredSize.width = 360;
 
         try { win.graphics.backgroundColor = win.graphics.newBrush(win.graphics.BrushType.SOLID_COLOR, BRAND.bg); } catch (e) {}
 
@@ -801,13 +868,13 @@
         var header = win.add("group");
         header.orientation = "row";
         header.alignChildren = ["left", "center"];
-        header.spacing = 12;
+        header.spacing = 10;
 
         if (LOGO_FILE) {
             try { header.add("image", undefined, LOGO_FILE); } catch (e) {}
         }
 
-        styledText(header, "CRASH GUARD", 20, "BOLD", BRAND.text);
+        styledText(header, "CRASH GUARD", 16, "BOLD", BRAND.text);
 
         var spacer = header.add("group");
         spacer.alignment = ["fill", "fill"];
@@ -815,7 +882,7 @@
         var badge = header.add("group");
         badge.orientation = "column";
         badge.alignChildren = ["center", "center"];
-        badge.minimumSize = [90, 26];
+        badge.minimumSize = [74, 20];
         badge.onDraw = function () {
             var g = this.graphics;
             var fill = g.newBrush(g.BrushType.SOLID_COLOR, BRAND.accent);
@@ -824,119 +891,147 @@
         };
         var badgeText = badge.add("statictext", undefined, "by Kreevo");
         try {
-            badgeText.graphics.font = ScriptUI.newFont(FONT, "BOLD", 12);
+            badgeText.graphics.font = ScriptUI.newFont(FONT, "BOLD", 10);
             badgeText.graphics.foregroundColor = badgeText.graphics.newPen(badgeText.graphics.PenType.SOLID_COLOR, BRAND.text, 1);
         } catch (e) {}
 
         if (possibleCrashDetected) {
             var crashLines = ["⚠ Last session didn't close cleanly — possible crash or freeze."];
             if (lastKnownStateAtStartup) {
-                crashLines.push("You were last working on: " + (lastKnownStateAtStartup.PROJECT || "—") +
-                    (lastKnownStateAtStartup.COMP && lastKnownStateAtStartup.COMP !== "—" ? " — comp \"" + lastKnownStateAtStartup.COMP + "\"" : "") +
-                    (lastKnownStateAtStartup.TIME ? " (around " + lastKnownStateAtStartup.TIME + ")" : ""));
+                crashLines.push("Last working on: " + (lastKnownStateAtStartup.PROJECT || "—") +
+                    (lastKnownStateAtStartup.COMP && lastKnownStateAtStartup.COMP !== "—" ? " — \"" + lastKnownStateAtStartup.COMP + "\"" : "") +
+                    (lastKnownStateAtStartup.TIME ? " (" + lastKnownStateAtStartup.TIME + ")" : ""));
             }
-            crashLines.push("Check RECENT BACKUPS below to restore.");
-            var crashBanner = styledText(win, crashLines.join("\n"), 13, "REGULAR", BRAND.accent, true);
+            crashLines.push("See BACKUP tab to restore.");
+            var crashBanner = styledText(win, crashLines.join("\n"), 12, "REGULAR", BRAND.accent, true);
             crashBanner.alignment = ["fill", "top"];
-            crashBanner.preferredSize = [384, lastKnownStateAtStartup ? 62 : 40];
+            crashBanner.preferredSize = [330, lastKnownStateAtStartup ? 52 : 34];
         }
 
-        divider(win);
+        // ---- Tab bar ----
+        var tabRow = win.add("group");
+        tabRow.orientation = "row";
+        tabRow.alignChildren = ["fill", "fill"];
+        tabRow.spacing = 3;
 
-        // ---- System Load card ----
-        var loadCard = card(win);
-        styledText(loadCard, "SYSTEM LOAD — why AE might be lagging", 13, "BOLD", BRAND.muted);
+        var monitorPage, backupPage, cleanerPage;
+        function setActiveTab(name) {
+            monitorTab.setActive(name === "monitor");
+            backupTab.setActive(name === "backup");
+            cleanerTab.setActive(name === "cleaner");
+            monitorPage.visible = (name === "monitor");
+            backupPage.visible = (name === "backup");
+            cleanerPage.visible = (name === "cleaner");
+            try { win.layout.layout(true); win.layout.resize(); } catch (e) {}
+        }
+        var monitorTab = tabButton(tabRow, "MONITOR", function () { setActiveTab("monitor"); });
+        var backupTab = tabButton(tabRow, "BACKUP", function () { setActiveTab("backup"); });
+        var cleanerTab = tabButton(tabRow, "CLEANER", function () { setActiveTab("cleaner"); });
+
+        // ================= MONITOR PAGE =================
+        monitorPage = win.add("group");
+        monitorPage.orientation = "column";
+        monitorPage.alignChildren = ["fill", "top"];
+        monitorPage.spacing = 8;
+
+        var loadCard = card(monitorPage);
+        styledText(loadCard, "WHY AE MIGHT BE LAGGING", 12, "BOLD", BRAND.muted);
 
         var statsRow = loadCard.add("group");
         statsRow.orientation = "row";
         statsRow.alignChildren = ["fill", "top"];
-        statsRow.spacing = 24;
+        statsRow.spacing = 16;
 
         var cpuCol = statsRow.add("group");
         cpuCol.orientation = "column";
         cpuCol.alignChildren = ["fill", "top"];
         cpuCol.alignment = ["fill", "top"];
-        styledText(cpuCol, "CPU", 12, "BOLD", BRAND.muted);
-        cpuValueText = styledText(cpuCol, "—", 40, "BOLD", BRAND.text);
+        cpuCol.spacing = 4;
+        styledText(cpuCol, "CPU", 11, "BOLD", BRAND.muted);
+        cpuValueText = styledText(cpuCol, "—", 30, "BOLD", BRAND.text);
         cpuBar = gaugeBar(cpuCol);
 
         var ramCol = statsRow.add("group");
         ramCol.orientation = "column";
         ramCol.alignChildren = ["fill", "top"];
         ramCol.alignment = ["fill", "top"];
-        styledText(ramCol, "RAM", 12, "BOLD", BRAND.muted);
-        ramValueText = styledText(ramCol, "—", 40, "BOLD", BRAND.text);
+        ramCol.spacing = 4;
+        styledText(ramCol, "RAM", 11, "BOLD", BRAND.muted);
+        ramValueText = styledText(ramCol, "—", 30, "BOLD", BRAND.text);
         ramBar = gaugeBar(ramCol);
-        ramSubText = styledText(ramCol, "", 12, "REGULAR", BRAND.muted);
+        ramSubText = styledText(ramCol, "", 11, "REGULAR", BRAND.muted);
 
         var tempRow = loadCard.add("group");
         tempRow.orientation = "row";
         tempRow.alignChildren = ["fill", "top"];
-        tempRow.spacing = 24;
+        tempRow.spacing = 16;
 
         var tempCol = tempRow.add("group");
         tempCol.orientation = "column";
         tempCol.alignChildren = ["left", "top"];
         tempCol.alignment = ["fill", "top"];
-        styledText(tempCol, "CPU TEMP", 12, "BOLD", BRAND.muted);
-        tempValueText = styledText(tempCol, "Checking…", 13, "ITALIC", BRAND.muted, true);
-        tempValueText.preferredSize = [180, 34];
+        styledText(tempCol, "CPU TEMP", 11, "BOLD", BRAND.muted);
+        tempValueText = styledText(tempCol, "Checking…", 12, "ITALIC", BRAND.muted, true);
+        tempValueText.preferredSize = [150, 30];
 
         var gpuCol = tempRow.add("group");
         gpuCol.orientation = "column";
         gpuCol.alignChildren = ["left", "top"];
         gpuCol.alignment = ["fill", "top"];
-        styledText(gpuCol, "GPU TEMP", 12, "BOLD", BRAND.muted);
-        gpuValueText = styledText(gpuCol, "Checking…", 13, "ITALIC", BRAND.muted, true);
-        gpuValueText.preferredSize = [180, 34];
+        styledText(gpuCol, "GPU TEMP", 11, "BOLD", BRAND.muted);
+        gpuValueText = styledText(gpuCol, "Checking…", 12, "ITALIC", BRAND.muted, true);
+        gpuValueText.preferredSize = [150, 30];
 
         explanationText = loadCard.add("statictext", undefined, "", { multiline: true });
         explanationText.alignment = ["fill", "top"];
-        explanationText.preferredSize = [380, 36];
+        explanationText.preferredSize = [330, 44];
         try {
-            explanationText.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 13);
+            explanationText.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 12);
             explanationText.graphics.foregroundColor = explanationText.graphics.newPen(explanationText.graphics.PenType.SOLID_COLOR, BRAND.accent, 1);
         } catch (e) {}
 
-        flatButton(loadCard, "Check before I render", function () { checkRenderReadiness(true); });
+        flatButton(monitorPage, "Check before I render", function () { checkRenderReadiness(true); });
 
-        // ---- Auto-Backup card ----
-        var autoCard = card(win);
-        styledText(autoCard, "AUTO-BACKUP", 13, "BOLD", BRAND.muted);
+        // ================= BACKUP PAGE =================
+        backupPage = win.add("group");
+        backupPage.orientation = "column";
+        backupPage.alignChildren = ["fill", "top"];
+        backupPage.spacing = 8;
+
+        var autoCard = card(backupPage);
+        styledText(autoCard, "AUTO-BACKUP", 12, "BOLD", BRAND.muted);
         var backupExplain = styledText(autoCard,
-            "Saves a timestamped copy of your project into a \"Kreevo_Backups\" folder next to it — so if After Effects crashes, freezes, or you lose work, you can restore an earlier version below.",
-            12, "REGULAR", BRAND.muted, true);
-        backupExplain.preferredSize = [384, 46];
+            "Saves a timestamped copy into \"Kreevo_Backups\" next to your project — restore any version below if AE crashes or you lose work.",
+            11, "REGULAR", BRAND.muted, true);
+        backupExplain.preferredSize = [330, 32];
 
         var enableRow = autoCard.add("group");
         enableRow.orientation = "row";
         enableRow.alignChildren = ["left", "center"];
-        var enableCheck = enableRow.add("checkbox", undefined, "  Enabled — protecting your work automatically");
+        var enableCheck = enableRow.add("checkbox", undefined, "  Enabled — protecting your work");
         enableCheck.value = settings.enabled;
-        try { enableCheck.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 14); } catch (e) {}
+        try { enableCheck.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 13); } catch (e) {}
 
         var intervalRow = autoCard.add("group");
         intervalRow.orientation = "row";
         intervalRow.alignChildren = ["left", "center"];
-        intervalRow.spacing = 10;
-        styledText(intervalRow, "Every", 14, "REGULAR", BRAND.muted);
+        intervalRow.spacing = 8;
+        styledText(intervalRow, "Every", 13, "REGULAR", BRAND.muted);
         var intervalInput = intervalRow.add("edittext", undefined, String(settings.intervalMinutes));
         intervalInput.characters = 4;
-        try { intervalInput.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 14); } catch (e) {}
-        styledText(intervalRow, "minutes", 14, "REGULAR", BRAND.muted);
-
-        var keepRow = autoCard.add("group");
-        keepRow.orientation = "row";
-        keepRow.alignChildren = ["left", "center"];
-        keepRow.spacing = 10;
-        styledText(keepRow, "Keep last", 14, "REGULAR", BRAND.muted);
-        var maxBackupsInput = keepRow.add("edittext", undefined, String(settings.maxBackups));
+        try { intervalInput.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 13); } catch (e) {}
+        styledText(intervalRow, "min", 13, "REGULAR", BRAND.muted);
+        styledText(intervalRow, "   Keep last", 13, "REGULAR", BRAND.muted);
+        var maxBackupsInput = intervalRow.add("edittext", undefined, String(settings.maxBackups));
         maxBackupsInput.characters = 4;
-        try { maxBackupsInput.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 14); } catch (e) {}
-        styledText(keepRow, "backups", 14, "REGULAR", BRAND.muted);
+        try { maxBackupsInput.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 13); } catch (e) {}
 
-        statusText = styledText(autoCard, settings.enabled ? "Auto-backup on" : "Auto-backup off", 13, "REGULAR", BRAND.muted);
-        backupAgoText = styledText(autoCard, "No backup yet this session", 13, "REGULAR", BRAND.muted);
+        var chipRow = autoCard.add("group");
+        chipRow.orientation = "row";
+        chipRow.alignChildren = ["left", "center"];
+        chipRow.spacing = 6;
+        statusChip = chip(chipRow, settings.enabled ? "Auto-backup on" : "Auto-backup off");
+        backupAgoChip = chip(chipRow, "No backup yet this session");
 
         function applySettingsFromUI() {
             settings.enabled = enableCheck.value;
@@ -966,27 +1061,23 @@
         intervalInput.onChange = applySettingsFromUI;
         maxBackupsInput.onChange = applySettingsFromUI;
 
-        // ---- Action buttons ----
-        var actions = win.add("group");
+        var actions = backupPage.add("group");
         actions.orientation = "column";
         actions.alignChildren = ["fill", "top"];
-        actions.spacing = 10;
+        actions.spacing = 6;
 
         flatButton(actions, "Back up now", function () { runBackup(false); });
         flatButton(actions, "Run health check", runHealthCheck);
         flatButton(actions, "View history log", showHistoryWindow);
 
-        divider(win);
-
-        // ---- Restore card ----
-        var restoreCard = card(win);
-        styledText(restoreCard, "RECENT BACKUPS", 13, "BOLD", BRAND.muted);
-        var restoreExplain = styledText(restoreCard, "Pick a version below and restore it if something goes wrong.", 12, "REGULAR", BRAND.muted, true);
-        restoreExplain.preferredSize = [384, 20];
+        var restoreCard = card(backupPage);
+        styledText(restoreCard, "RECENT BACKUPS", 12, "BOLD", BRAND.muted);
+        var restoreExplain = styledText(restoreCard, "Pick a version and restore it if something goes wrong.", 11, "REGULAR", BRAND.muted, true);
+        restoreExplain.preferredSize = [330, 16];
 
         var backupDropdown = restoreCard.add("dropdownlist", undefined, []);
         backupDropdown.alignment = ["fill", "top"];
-        try { backupDropdown.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 14); } catch (e) {}
+        try { backupDropdown.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 13); } catch (e) {}
 
         function refreshBackupList() {
             backupDropdown.removeAll();
@@ -1003,7 +1094,7 @@
         var restoreActions = restoreCard.add("group");
         restoreActions.orientation = "column";
         restoreActions.alignChildren = ["fill", "top"];
-        restoreActions.spacing = 10;
+        restoreActions.spacing = 6;
 
         flatButton(restoreActions, "Restore selected", function () {
             var idx = backupDropdown.selection ? backupDropdown.selection.index : -1;
@@ -1015,6 +1106,32 @@
         });
         flatButton(restoreActions, "Refresh list", refreshBackupList);
 
+        // ================= CLEANER PAGE =================
+        cleanerPage = win.add("group");
+        cleanerPage.orientation = "column";
+        cleanerPage.alignChildren = ["fill", "top"];
+        cleanerPage.spacing = 8;
+
+        var cleanCard = card(cleanerPage);
+        styledText(cleanCard, "PROJECT CLEANER", 12, "BOLD", BRAND.muted);
+        var cleanExplain = styledText(cleanCard,
+            "Housekeeping that keeps every project running smoothly — do this every so often, not just when something breaks.",
+            11, "REGULAR", BRAND.muted, true);
+        cleanExplain.preferredSize = [330, 30];
+
+        flatButton(cleanCard, "Remove unused footage", cleanerRemoveUnused);
+        var removeExplain = styledText(cleanCard, "Deletes project items nothing in your comps actually uses.", 11, "REGULAR", BRAND.muted, true);
+        removeExplain.preferredSize = [330, 16];
+
+        flatButton(cleanCard, "Consolidate duplicate footage", cleanerConsolidate);
+        var consolidateExplain = styledText(cleanCard, "Merges footage imported more than once into a single item.", 11, "REGULAR", BRAND.muted, true);
+        consolidateExplain.preferredSize = [330, 16];
+
+        flatButton(cleanCard, "Purge memory and disk caches", cleanerPurge);
+        var purgeExplain = styledText(cleanCard, "Frees up RAM immediately — use this when the SYSTEM LOAD tab shows RAM running high.", 11, "REGULAR", BRAND.muted, true);
+        purgeExplain.preferredSize = [330, 30];
+
+        // ---- wire up ----
         win.layout.layout(true);
         win.layout.resize();
         win.onResizing = win.onResize = function () { this.layout.resize(); };
@@ -1023,6 +1140,8 @@
             if (monitorTaskId !== null) { try { app.cancelTask(monitorTaskId); } catch (e) {} }
             clearSessionMarker();
         };
+
+        setActiveTab("monitor");
 
         if (settings.enabled) scheduleNextBackup();
         recordLastKnownState();
