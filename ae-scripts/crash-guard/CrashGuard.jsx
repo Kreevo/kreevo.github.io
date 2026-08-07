@@ -579,12 +579,30 @@
     // ---------------------------------------------------------------
     // SCHEDULED TASKS
     // ---------------------------------------------------------------
+    // Task IDs are mirrored into $.global (not just kept in local vars)
+    // because reloading this script — installing a new version, or AE
+    // re-running a dockable panel's script — creates a brand-new closure
+    // with backupTaskId/monitorTaskId reset to null. That new instance
+    // has no way to see or cancel a still-pending task scheduled by the
+    // PREVIOUS instance, so the old timer chain keeps re-scheduling
+    // itself forever, running alongside the new one. Each reload during
+    // development/testing could silently add another parallel chain,
+    // multiplying how many wmic/PowerShell launches fire on every tick —
+    // a very plausible cause of freezes that get worse over a session
+    // with no single obvious trigger. Cancelling any ID left over in
+    // $.global before scheduling new tasks closes that gap.
+    if ($.global.__crashGuardBackupTaskId != null) { try { app.cancelTask($.global.__crashGuardBackupTaskId); } catch (e) {} }
+    if ($.global.__crashGuardMonitorTaskId != null) { try { app.cancelTask($.global.__crashGuardMonitorTaskId); } catch (e) {} }
+
     var backupTaskId = null;
     function scheduleNextBackup() {
         if (backupTaskId !== null) { try { app.cancelTask(backupTaskId); } catch (e) {} backupTaskId = null; }
         if (!settings.enabled) return;
         var delayMs = Math.max(1, settings.intervalMinutes) * 60 * 1000;
-        try { backupTaskId = app.scheduleTask("$.global.crashGuardBackupTick()", delayMs, false); } catch (e) {}
+        try {
+            backupTaskId = app.scheduleTask("$.global.crashGuardBackupTick()", delayMs, false);
+            $.global.__crashGuardBackupTaskId = backupTaskId;
+        } catch (e) {}
     }
     $.global.crashGuardBackupTick = function () {
         if (!settings.enabled) return;
@@ -602,7 +620,10 @@
         // process returns, so this interval is deliberately generous —
         // frequent polling was making the whole app feel like it was
         // hanging every few seconds.
-        try { monitorTaskId = app.scheduleTask("$.global.crashGuardMonitorTick()", 20000, false); } catch (e) {}
+        try {
+            monitorTaskId = app.scheduleTask("$.global.crashGuardMonitorTick()", 20000, false);
+            $.global.__crashGuardMonitorTaskId = monitorTaskId;
+        } catch (e) {}
     }
     $.global.crashGuardMonitorTick = function () {
         // Temperature is intentionally NOT auto-refreshed here: the WMI
