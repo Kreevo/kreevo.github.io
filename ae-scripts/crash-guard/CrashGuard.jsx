@@ -1020,6 +1020,12 @@
         backupDropdown.alignment = ["fill", "top"];
         try { backupDropdown.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 13); } catch (e) {}
 
+        // Shown only when the list comes back empty, so an empty dropdown
+        // never looks like it silently failed — it always says why.
+        var restoreStatusText = styledText(restoreCard, "", 11, "ITALIC", BRAND.accent, true);
+        restoreStatusText.alignment = ["fill", "top"];
+        restoreStatusText.minimumSize.height = 0;
+
         function refreshBackupList() {
             backupDropdown.removeAll();
             var files = listBackups();
@@ -1028,6 +1034,17 @@
             if (files.length > 0) {
                 backupDropdown.selection = 0;
                 if (!lastBackupDate) lastBackupDate = files[0].created;
+                restoreStatusText.text = "";
+                restoreStatusText.minimumSize.height = 0;
+            } else if (!app.project) {
+                restoreStatusText.text = "No project is open.";
+                restoreStatusText.minimumSize.height = 16;
+            } else if (!app.project.file) {
+                restoreStatusText.text = "This project isn't saved yet — use File > Save As first, so Crash Guard knows where to keep backups.";
+                restoreStatusText.minimumSize.height = 30;
+            } else {
+                restoreStatusText.text = "No backups found yet in \"Kreevo_Backups\" next to this project.";
+                restoreStatusText.minimumSize.height = 16;
             }
         }
         refreshBackupList();
