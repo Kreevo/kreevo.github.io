@@ -55,12 +55,91 @@
     var LAST_STATE_FILE = new File(BASE_DIR + "/last_state.txt");
     var CPU_RAM_PS1_FILE = new File(BASE_DIR + "/cg_cpu_ram.ps1");
     var TEMP_PS1_FILE = new File(BASE_DIR + "/cg_temp.ps1");
+    var LICENSE_FILE = new File(BASE_DIR + "/license.txt");
 
     function ensureBaseDir() {
         try {
             var f = new Folder(BASE_DIR);
             if (!f.exists) f.create();
         } catch (e) {}
+    }
+
+    // ---------------------------------------------------------------
+    // LICENSE — Gumroad license key verification (v2/licenses/verify,
+    // the public endpoint meant for exactly this client-side use — no
+    // seller access token needed). Verified against Gumroad's servers
+    // only once, when the user clicks Activate; the result is then
+    // cached locally in plain key=value form (same style as settings,
+    // no JSON dependency) so every later panel open just reads a local
+    // file — no network call, no blocking, on every normal launch.
+    // ---------------------------------------------------------------
+    var GUMROAD_PRODUCT_ID = "NTOA03qkghY_5wjchvVgOw==";
+
+    function loadLicenseState() {
+        try {
+            if (!LICENSE_FILE.exists) return null;
+            LICENSE_FILE.open("r");
+            var raw = LICENSE_FILE.read();
+            LICENSE_FILE.close();
+            var result = {};
+            var lines = raw.split("\n");
+            for (var i = 0; i < lines.length; i++) {
+                var eq = lines[i].indexOf("=");
+                if (eq < 0) continue;
+                result[lines[i].substring(0, eq)] = lines[i].substring(eq + 1);
+            }
+            return (result.verified === "true" && result.licenseKey) ? result : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function saveLicenseState(key) {
+        try {
+            ensureBaseDir();
+            LICENSE_FILE.open("w");
+            LICENSE_FILE.write("licenseKey=" + key + "\nverified=true\nverifiedAt=" + timestamp());
+            LICENSE_FILE.close();
+        } catch (e) {}
+    }
+
+    function isLicensed() {
+        return loadLicenseState() !== null;
+    }
+
+    // Runs curl via system.callSystem, which blocks the AE UI thread until
+    // it returns — acceptable here only because this fires exactly once,
+    // directly in response to the user clicking Activate, never on a
+    // timer or automatically on open. A hard timeout (-m 12) keeps a dead
+    // connection from turning into an indefinite freeze, the same failure
+    // mode this file has spent a lot of effort eliminating elsewhere.
+    // No JSON.parse in this ExtendScript engine, so success/message are
+    // pulled out with plain regexes rather than a full parser — the same
+    // "no JSON dependency" approach the settings/history code already uses.
+    function verifyLicenseWithGumroad(key) {
+        var trimmedKey = key.replace(/^\s+|\s+$/g, "");
+        if (!trimmedKey) return { success: false, message: "Enter a license key first." };
+        // The key is embedded straight into a shell command string below
+        // (system.callSystem runs it through a shell), so it's validated
+        // against the character set real Gumroad keys use before that —
+        // a pasted value containing quotes or shell metacharacters could
+        // otherwise break out of the quoted argument and inject commands.
+        if (!/^[A-Za-z0-9-]+$/.test(trimmedKey)) {
+            return { success: false, message: "That doesn't look like a valid license key (letters, numbers, and dashes only)." };
+        }
+        var curlCmd = 'curl -s -m 12 -X POST https://api.gumroad.com/v2/licenses/verify' +
+            ' --data-urlencode "product_id=' + GUMROAD_PRODUCT_ID + '"' +
+            ' --data-urlencode "license_key=' + trimmedKey + '"' +
+            ' --data-urlencode "increment_uses_count=true"';
+        var out = runSystemCommand(curlCmd);
+        if (!out) return { success: false, message: "Couldn't reach Gumroad — check your internet connection and try again." };
+        var successMatch = out.match(/"success"\s*:\s*(true|false)/);
+        if (!successMatch) return { success: false, message: "Unexpected response from Gumroad. Try again in a moment." };
+        if (successMatch[1] !== "true") {
+            var msgMatch = out.match(/"message"\s*:\s*"([^"]*)"/);
+            return { success: false, message: msgMatch ? msgMatch[1] : "That license key isn't valid for Crash Guard." };
+        }
+        return { success: true };
     }
 
     // ---------------------------------------------------------------
@@ -839,6 +918,74 @@
     }
 
     // ---------------------------------------------------------------
+    // LICENSE GATE — shown instead of the full panel until a valid
+    // Gumroad license key is activated. Deliberately its own small,
+    // separate screen rather than something dynamically swapped out for
+    // the full tabbed panel inside the same window: ScriptUI doesn't
+    // reliably repaint a big layout change (hide one tree, show another)
+    // triggered from inside a click handler, so activating just asks the
+    // user to close and reopen the panel — one extra step, but it always
+    // renders correctly rather than risking a half-drawn UI.
+    // ---------------------------------------------------------------
+    function buildLicenseGate(win) {
+        win.orientation = "column";
+        win.alignChildren = ["fill", "top"];
+        win.spacing = 10;
+        win.margins = 20;
+        win.preferredSize.width = 360;
+        try { win.graphics.backgroundColor = win.graphics.newBrush(win.graphics.BrushType.SOLID_COLOR, BRAND.bg); } catch (e) {}
+
+        var header = win.add("group");
+        header.orientation = "row";
+        header.alignChildren = ["left", "center"];
+        header.spacing = 10;
+        var mark = header.add("group");
+        mark.minimumSize.width = mark.maximumSize.width = 10;
+        mark.minimumSize.height = mark.maximumSize.height = 10;
+        try { mark.graphics.backgroundColor = mark.graphics.newBrush(mark.graphics.BrushType.SOLID_COLOR, BRAND.accent); } catch (e) {}
+        styledText(header, "CRASH GUARD", 20, "BOLD", BRAND.text);
+
+        styledText(win, "by Kreevo", 12, "BOLD", BRAND.accent);
+
+        var gateCard = card(win);
+        styledText(gateCard, "ACTIVATE YOUR LICENSE", 13, "BOLD", BRAND.muted);
+        var explain = styledText(gateCard, "Paste the license key from your Gumroad purchase receipt email.", 12, "REGULAR", BRAND.muted, true);
+        explain.alignment = ["fill", "top"];
+        explain.minimumSize.height = 30;
+
+        var keyInput = gateCard.add("edittext", undefined, "");
+        keyInput.alignment = ["fill", "top"];
+        try { keyInput.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 14); } catch (e) {}
+
+        var gateStatus = styledText(gateCard, "", 12, "REGULAR", BRAND.muted, true);
+        gateStatus.alignment = ["fill", "top"];
+        gateStatus.minimumSize.height = 34;
+
+        var activateBtn = nativeButton(gateCard, "Activate", function () {
+            activateBtn.enabled = false;
+            gateStatus.text = "Verifying with Gumroad…";
+            try { gateStatus.graphics.foregroundColor = gateStatus.graphics.newPen(gateStatus.graphics.PenType.SOLID_COLOR, BRAND.muted, 1); } catch (e) {}
+            try { win.layout.layout(true); } catch (e) {}
+
+            var result = verifyLicenseWithGumroad(keyInput.text);
+            activateBtn.enabled = true;
+            if (result.success) {
+                saveLicenseState(keyInput.text.replace(/^\s+|\s+$/g, ""));
+                gateStatus.text = "Activated! Close and reopen this panel to continue.";
+                try { gateStatus.graphics.foregroundColor = gateStatus.graphics.newPen(gateStatus.graphics.PenType.SOLID_COLOR, BRAND.accent, 1); } catch (e) {}
+            } else {
+                gateStatus.text = result.message;
+                try { gateStatus.graphics.foregroundColor = gateStatus.graphics.newPen(gateStatus.graphics.PenType.SOLID_COLOR, BRAND.warn, 1); } catch (e) {}
+            }
+            try { win.layout.layout(true); } catch (e) {}
+        });
+
+        win.layout.layout(true);
+        win.layout.resize();
+        return win;
+    }
+
+    // ---------------------------------------------------------------
     // UI
     // ---------------------------------------------------------------
     function buildUI(thisObj) {
@@ -865,6 +1012,10 @@
         var win = (thisObj instanceof Panel)
             ? thisObj
             : new Window("palette", "Crash Guard by Kreevo", undefined, { resizeable: true });
+
+        if (!isLicensed()) {
+            return buildLicenseGate(win);
+        }
 
         win.orientation = "column";
         win.alignChildren = ["fill", "top"];
