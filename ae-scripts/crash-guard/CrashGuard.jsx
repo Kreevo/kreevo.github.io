@@ -300,7 +300,22 @@
     // only as a fallback for Windows builds where wmic was removed.
     function getWindowsCPURAM() {
         var cpuOut = runSystemCommand("wmic cpu get loadpercentage");
-        var cpu = firstNumber(cpuOut);
+        // A multi-socket machine reports one LoadPercentage line per
+        // physical CPU — average them all rather than just the first.
+        var cpu = null;
+        if (cpuOut) {
+            var cpuNums = [];
+            var cpuLines = cpuOut.split(/\r?\n/);
+            for (var ci = 0; ci < cpuLines.length; ci++) {
+                var cn = firstNumber(cpuLines[ci]);
+                if (cn !== null) cpuNums.push(cn);
+            }
+            if (cpuNums.length > 0) {
+                var sum = 0;
+                for (var cj = 0; cj < cpuNums.length; cj++) sum += cpuNums[cj];
+                cpu = sum / cpuNums.length;
+            }
+        }
         var memOut = runSystemCommand("wmic OS get FreePhysicalMemory,TotalVisibleMemorySize /Value");
         var freeKB = null, totalKB = null;
         if (memOut) {
@@ -1057,6 +1072,7 @@
 
         win.onClose = function () {
             if (monitorTaskId !== null) { try { app.cancelTask(monitorTaskId); } catch (e) {} }
+            if (backupTaskId !== null) { try { app.cancelTask(backupTaskId); } catch (e) {} }
             clearSessionMarker();
         };
 
