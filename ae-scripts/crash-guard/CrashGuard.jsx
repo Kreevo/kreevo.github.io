@@ -119,6 +119,12 @@
                 }
             }
         } catch (e) {}
+        // A stray or hand-edited settings file could contain a value below
+        // the UI's own minimum (e.g. maxBackups=0), which would make
+        // cleanupOldBackups delete every backup immediately after it's
+        // created. Clamp on load too, not just when the UI writes it.
+        if (result.maxBackups < 1) result.maxBackups = SETTINGS_DEFAULTS.maxBackups;
+        if (result.intervalMinutes < 1) result.intervalMinutes = SETTINGS_DEFAULTS.intervalMinutes;
         return result;
     }
 
