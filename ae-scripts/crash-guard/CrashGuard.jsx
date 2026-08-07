@@ -25,27 +25,13 @@
     var FONT = getBestFont();
 
     // ---------------------------------------------------------------
-    // LOGO — a plain PNG file that lives next to this script, same
-    // approach as MotionVault. Nothing to embed, nothing to decode.
-    // ---------------------------------------------------------------
-    function getLogoFile() {
-        try {
-            var scriptFile = new File($.fileName);
-            var logoFile = new File(scriptFile.parent.fsName + "/CrashGuard_logo.png");
-            return logoFile.exists ? logoFile : null;
-        } catch (e) {
-            return null;
-        }
-    }
-    var LOGO_FILE = getLogoFile();
-
-    // ---------------------------------------------------------------
     // PATHS
     // ---------------------------------------------------------------
     var BASE_DIR = Folder.userData.fsName + "/Kreevo/CrashGuard";
     var SETTINGS_FILE = new File(BASE_DIR + "/settings.txt");
     var HISTORY_FILE = new File(BASE_DIR + "/history.log");
     var SESSION_MARKER = new File(BASE_DIR + "/session.lock");
+    var LOGO_CACHE_FILE = new File(BASE_DIR + "/logo_cache.png");
 
     function ensureBaseDir() {
         try {
@@ -53,6 +39,55 @@
             if (!f.exists) f.create();
         } catch (e) {}
     }
+
+    // ---------------------------------------------------------------
+    // LOGO — embedded as base64 so the whole panel ships as one .jsx
+    // with nothing else to install or place in a folder. Decoded once
+    // into a small cache file next time the panel opens (ScriptUI's
+    // "image" control needs an actual file on disk, not raw bytes),
+    // then reused on every later launch — invisible to the user.
+    // ---------------------------------------------------------------
+    var LOGO_BASE64 =
+        "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";
+
+    function base64Decode(b64) {
+        var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+        var output = "";
+        var i = 0;
+        while (i < b64.length) {
+            var e1 = chars.indexOf(b64.charAt(i++));
+            var e2 = chars.indexOf(b64.charAt(i++));
+            var e3 = chars.indexOf(b64.charAt(i++));
+            var e4 = chars.indexOf(b64.charAt(i++));
+            var c1 = (e1 << 2) | (e2 >> 4);
+            var c2 = ((e2 & 15) << 4) | (e3 >> 2);
+            var c3 = ((e3 & 3) << 6) | e4;
+            output += String.fromCharCode(c1);
+            if (e3 !== 64) output += String.fromCharCode(c2);
+            if (e4 !== 64) output += String.fromCharCode(c3);
+        }
+        return output;
+    }
+
+    // Writes the embedded logo out to a cache file the first time the
+    // panel runs, then reuses that file on every later launch. Never
+    // blocks the panel if it fails — the header just renders without
+    // the icon.
+    function getLogoFile() {
+        try {
+            if (!LOGO_CACHE_FILE.exists) {
+                ensureBaseDir();
+                LOGO_CACHE_FILE.encoding = "BINARY";
+                LOGO_CACHE_FILE.open("w");
+                LOGO_CACHE_FILE.write(base64Decode(LOGO_BASE64));
+                LOGO_CACHE_FILE.close();
+            }
+            return LOGO_CACHE_FILE.exists ? LOGO_CACHE_FILE : null;
+        } catch (e) {
+            return null;
+        }
+    }
+    var LOGO_FILE = getLogoFile();
 
     // ---------------------------------------------------------------
     // SETTINGS — plain "key=value" lines, no eval, no JSON dependency.
