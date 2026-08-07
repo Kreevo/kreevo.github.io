@@ -1,7 +1,9 @@
 // Crash Guard by Kreevo
 // ScriptUI dockable panel for After Effects — versioned auto-backup,
 // live system load monitor, pre-render health check, project cleaner.
-// v1.0 — tabbed layout rebuild
+// v1.0 — native-controls rebuild (custom-drawn buttons/tabs were not
+// rendering reliably; this build uses ScriptUI's built-in controls,
+// which are OS-drawn and always visible, at the cost of some styling).
 
 (function (thisObj) {
 
@@ -11,8 +13,6 @@
     var BRAND = {
         bg:       [0x2E / 255, 0x4A / 255, 0x3A / 255],
         card:     [0x3D / 255, 0x5C / 255, 0x48 / 255],
-        btn:      [0x45 / 255, 0x67 / 255, 0x52 / 255],
-        btnHover: [0x51 / 255, 0x76 / 255, 0x5F / 255],
         accent:   [0xD8 / 255, 0x5A / 255, 0x30 / 255],
         text:     [0xF5 / 255, 0xF2 / 255, 0xE3 / 255],
         muted:    [0xB8 / 255, 0xC4 / 255, 0xB5 / 255],
@@ -24,6 +24,9 @@
     }
     var FONT = getBestFont();
     var IS_WIN = ($.os.indexOf("Windows") !== -1);
+    // Full path, not just "powershell" — AE's system.callSystem may run
+    // with a reduced PATH that can't resolve the bare command name.
+    var POWERSHELL_EXE = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
 
     // ---------------------------------------------------------------
     // PATHS
@@ -34,10 +37,6 @@
     var SESSION_MARKER = new File(BASE_DIR + "/session.lock");
     var LOGO_CACHE_FILE = new File(BASE_DIR + "/logo_cache.png");
     var LAST_STATE_FILE = new File(BASE_DIR + "/last_state.txt");
-    // Separate, single-purpose PowerShell scripts — one metric per file.
-    // A single combined multi-line script proved unreliable: only its
-    // first output line consistently made it back through callSystem
-    // (CPU showed up, RAM/temp never did). Splitting removes that risk.
     var CPU_PS1_FILE = new File(BASE_DIR + "/cg_cpu.ps1");
     var RAM_PS1_FILE = new File(BASE_DIR + "/cg_ram.ps1");
     var TEMP_PS1_FILE = new File(BASE_DIR + "/cg_temp.ps1");
@@ -50,12 +49,9 @@
     }
 
     // ---------------------------------------------------------------
-    // LOGO — embedded as base64 so the whole panel ships as one .jsx
-    // with nothing else to install or place in a folder. Baked at the
-    // exact pixel size it's shown at (36x36) — ScriptUI's "image"
-    // control does NOT scale its contents to fit a bounding box, it
-    // draws pixels 1:1. Decoded once into a small cache file (ScriptUI
-    // needs a real file on disk, not raw bytes), then reused after.
+    // LOGO — embedded as base64 so the whole panel ships as one .jsx.
+    // Baked at its exact display size (36x36); ScriptUI's image control
+    // draws pixels 1:1 rather than scaling to a bounding box.
     // ---------------------------------------------------------------
     var LOGO_BASE64 =
         "iVBORw0KGgoAAAANSUhEUgAAACQAAAAkCAYAAADhAJiYAAACrUlEQVR4nO2UT4scVRTFz7mvuqu7qtsoZECdCBElOxfqMpDEnRtBXMzWjaDiymVAmPkEZuHCpYsggcmHmMGQneIqIQSGpGdaBpPMTP+pnuqqrnrHRfdgcBG7kglkUT94UDzq1Tl1370HqKmpqal5tWHVA5IIbLt/d64AQElSkhwAYnt7sQ2QnxQvbvM5mBt9cYIqgvMq/BWNh/n3zUb4rofMmXsyK+0ayf002f202e58nh1PgkYjtFme77S7/kfgnSlIENBpmD4xFADAaND7Vkolfyj5I0lSMuhdPTzcOTMZ7SVSKmm4WJmSpP8hAGxubrpnK8xZukInONrbQFlOxskMoHNBRpp9HbJ5SZImoycFoLIVxY1s+uhWvJ/elWQky5diSFIBwAEQIEIlAXVAXjGak2TmAiuKIneyb3jhQibJlv3+0i/+94QExXHkWvGKeXINwG/tzmpD8mpFHZtNj39ovbZ6b2trKyDpK+v8Hyc9lIx216Wxjsf9cpY//iMZ7X4FAGnaey+fPrqeTw8mk+HeHUlOklWdvsoVokhAMONBkef9Isv/BICdnfFeOhndyPP0ruDvz3vmJklWmqzKPTTHUBR+aOSl7pnXfx8Meu8HwJqZ+87D9wWeGx08vEiev71o6KWvrHpTU1oE/KqXnwlAg/aLqPMg3qTwBsEhw8bPg0HvMoDBSYYt96sVoWiALwE5gJ0smxagPiZ4FjRKaAlaacfdD5zx2tzIzZc3ZSQyoOPCsNkMmw2LOquBF34y8rN2fNaiKLIoageaZeh0V75Mjh5+RK6V0ikH48bGhpfENN3/NU//vujl35IXfPb4sGm6HnbP3UkGvautOP4in2ZmzjnmRw8UhP3FpJ3+6D+LKuF32sJ8WlySaX3dFs/u6dx5nhyqqampqXnV+QfXWHeeZJE1yQAAAABJRU5ErkJggg==";
@@ -190,9 +186,7 @@
     }
 
     // ---------------------------------------------------------------
-    // LAST KNOWN STATE — what project/comp was open, refreshed while
-    // the panel runs, so if After Effects dies we can tell the user
-    // exactly what they were doing right before it happened.
+    // LAST KNOWN STATE
     // ---------------------------------------------------------------
     function recordLastKnownState() {
         try {
@@ -235,7 +229,7 @@
     }
 
     // ---------------------------------------------------------------
-    // CRASH DETECTION — a marker file that only survives a bad exit.
+    // CRASH DETECTION
     // ---------------------------------------------------------------
     var possibleCrashDetected = false;
     var lastKnownStateAtStartup = null;
@@ -258,8 +252,7 @@
     checkPreviousSession();
 
     // ---------------------------------------------------------------
-    // SYSTEM LOAD — CPU / RAM / temperature, real readings only.
-    // Never estimates or fakes a number; unavailable stays unavailable.
+    // SYSTEM LOAD
     // ---------------------------------------------------------------
     function runSystemCommand(cmd) {
         try {
@@ -295,7 +288,7 @@
 
     function runPS1(file, content) {
         if (!writeScriptOnce(file, content)) return null;
-        var cmd = 'powershell -NoProfile -ExecutionPolicy Bypass -File "' + file.fsName + '"';
+        var cmd = '"' + POWERSHELL_EXE + '" -NoProfile -ExecutionPolicy Bypass -File "' + file.fsName + '"';
         return runSystemCommand(cmd);
     }
 
@@ -303,8 +296,6 @@
         var out = runPS1(CPU_PS1_FILE, "(Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average\r\n");
         var n = firstNumber(out);
         if (n !== null) return Math.round(n);
-        // Fallback for machines where PowerShell is restricted; wmic is
-        // deprecated on newest Windows builds, so this is second choice.
         var wmicOut = runSystemCommand("wmic cpu get loadpercentage");
         n = firstNumber(wmicOut);
         return n === null ? null : Math.round(n);
@@ -379,8 +370,6 @@
         };
     }
 
-    // Single entry point the UI calls once per refresh. Never throws,
-    // never fabricates — every field is either a real reading or null.
     function readSystemStats() {
         try {
             if (IS_WIN) {
@@ -406,11 +395,20 @@
     function playNotifySound() {
         try {
             if (IS_WIN) {
-                runSystemCommand('powershell -NoProfile -Command "[console]::beep(880,150)"');
+                runSystemCommand('"' + POWERSHELL_EXE + '" -NoProfile -Command "[console]::beep(880,150)"');
             } else {
                 runSystemCommand("afplay /System/Library/Sounds/Glass.aiff");
             }
         } catch (e) {}
+    }
+
+    // Ten-block text gauge — pure text, no custom drawing, always visible.
+    function textBar(percent) {
+        if (percent === null) return "──────────";
+        var filled = Math.round(Math.max(0, Math.min(100, percent)) / 10);
+        var bar = "";
+        for (var i = 0; i < 10; i++) bar += (i < filled) ? "▓" : "░";
+        return bar;
     }
 
     // ---------------------------------------------------------------
@@ -423,9 +421,9 @@
         return backupFolder;
     }
 
-    var statusChip = null;
+    var statusText = null;
     var lastBackupDate = null;
-    function setStatus(msg) { if (statusChip) { try { statusChip.setText(msg); } catch (e) {} } }
+    function setStatus(msg) { if (statusText) { try { statusText.text = msg; } catch (e) {} } }
 
     function runBackup(silent) {
         if (!(app.project && app.project.file)) {
@@ -505,9 +503,7 @@
     }
 
     // ---------------------------------------------------------------
-    // PROJECT CLEANER — the housekeeping tasks every editor ends up
-    // doing by hand: drop footage nothing references, merge duplicate
-    // imports, and free the RAM/disk caches AE builds up over a session.
+    // PROJECT CLEANER
     // ---------------------------------------------------------------
     function cleanerRemoveUnused() {
         if (!app.project) { alert("Open a project first."); return; }
@@ -565,9 +561,7 @@
     }
 
     // ---------------------------------------------------------------
-    // SCHEDULED TASKS — assigned to $.global so app.scheduleTask's
-    // by-name lookup finds them whether this runs as a dockable panel
-    // or a one-off script.
+    // SCHEDULED TASKS
     // ---------------------------------------------------------------
     var backupTaskId = null;
     function scheduleNextBackup() {
@@ -587,8 +581,6 @@
     var wasRendering = false;
     var wasHighLoad = false;
     function scheduleNextMonitorTick() {
-        // 8s balances a responsive readout against the overhead of
-        // launching PowerShell on Windows for each stats refresh.
         try { monitorTaskId = app.scheduleTask("$.global.crashGuardMonitorTick()", 8000, false); } catch (e) {}
     }
     $.global.crashGuardMonitorTick = function () {
@@ -603,7 +595,10 @@
     };
 
     // ---------------------------------------------------------------
-    // UI HELPERS
+    // UI HELPERS — native controls only, so everything is guaranteed
+    // to actually draw. Color styling is applied where ScriptUI allows
+    // it (mostly text and panel backgrounds); button chrome stays
+    // native rather than custom-drawn.
     // ---------------------------------------------------------------
     function styledText(parent, label, size, weight, color, multiline) {
         var t = parent.add("statictext", undefined, label, multiline ? { multiline: true } : undefined);
@@ -614,58 +609,12 @@
         return t;
     }
 
-    function flatButton(parent, label, onClick, fullWidth) {
-        var group = parent.add("group");
-        group.orientation = "column";
-        group.alignChildren = ["fill", "center"];
-        group.minimumSize.height = 40;
-        if (fullWidth !== false) group.alignment = ["fill", "top"];
-
-        var isOver = false;
-        group.onDraw = function () {
-            var g = this.graphics;
-            var fill = g.newBrush(g.BrushType.SOLID_COLOR, isOver ? BRAND.btnHover : BRAND.btn);
-            g.rectPath(0, 0, this.size[0], this.size[1]);
-            g.fillPath(fill);
-        };
-
-        var label_ = group.add("statictext", undefined, label);
-        label_.alignment = ["center", "center"];
-        try {
-            label_.graphics.font = ScriptUI.newFont(FONT, "BOLD", 14);
-            label_.graphics.foregroundColor = label_.graphics.newPen(label_.graphics.PenType.SOLID_COLOR, BRAND.text, 1);
-        } catch (e) {}
-
-        group.addEventListener("mouseover", function () { isOver = true; group.notify("onDraw"); });
-        group.addEventListener("mouseout", function () { isOver = false; group.notify("onDraw"); });
-        group.addEventListener("mousedown", function () { if (onClick) onClick(); });
-
-        return group;
-    }
-
-    // A tab: flat, switches to an accent fill when active.
-    function tabButton(parent, label, onClick) {
-        var group = parent.add("group");
-        group.orientation = "column";
-        group.alignChildren = ["fill", "center"];
-        group.alignment = ["fill", "top"];
-        group.minimumSize.height = 34;
-        group._active = false;
-        group.onDraw = function () {
-            var g = this.graphics;
-            var fill = g.newBrush(g.BrushType.SOLID_COLOR, this._active ? BRAND.accent : BRAND.card);
-            g.rectPath(0, 0, this.size[0], this.size[1]);
-            g.fillPath(fill);
-        };
-        var label_ = group.add("statictext", undefined, label);
-        label_.alignment = ["center", "center"];
-        try {
-            label_.graphics.font = ScriptUI.newFont(FONT, "BOLD", 12);
-            label_.graphics.foregroundColor = label_.graphics.newPen(label_.graphics.PenType.SOLID_COLOR, BRAND.text, 1);
-        } catch (e) {}
-        group.addEventListener("mousedown", function () { if (onClick) onClick(); });
-        group.setActive = function (a) { this._active = a; this.notify("onDraw"); };
-        return group;
+    function nativeButton(parent, label, onClick) {
+        var b = parent.add("button", undefined, label);
+        b.alignment = ["fill", "top"];
+        try { b.graphics.font = ScriptUI.newFont(FONT, "BOLD", 13); } catch (e) {}
+        b.onClick = onClick;
+        return b;
     }
 
     function card(parent) {
@@ -690,67 +639,13 @@
         return d;
     }
 
-    // Small pill-style status readout — a colored background behind
-    // short text, instead of plain text floating in empty space.
-    function chip(parent, initialText) {
-        var c = parent.add("group");
-        c.orientation = "row";
-        c.alignChildren = ["center", "center"];
-        c.alignment = ["left", "top"];
-        c.margins = [10, 5, 10, 5];
-        c.onDraw = function () {
-            var g = this.graphics;
-            var fill = g.newBrush(g.BrushType.SOLID_COLOR, BRAND.btn);
-            g.rectPath(0, 0, this.size[0], this.size[1]);
-            g.fillPath(fill);
-        };
-        var t = c.add("statictext", undefined, initialText);
-        try {
-            t.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 12);
-            t.graphics.foregroundColor = t.graphics.newPen(t.graphics.PenType.SOLID_COLOR, BRAND.text, 1);
-        } catch (e) {}
-        c.setText = function (txt) { t.text = txt; try { this.notify("onDraw"); } catch (e2) {} };
-        return c;
-    }
-
-    // A flat horizontal gauge bar (0-100%). Fill turns coral past 85%
-    // so danger reads at a glance, the way the big numbers above it do.
-    function gaugeBar(parent) {
-        var bar = parent.add("group");
-        bar.alignment = ["fill", "top"];
-        bar.minimumSize.height = 8;
-        bar.maximumSize.height = 8;
-        bar._percent = 0;
-        bar._danger = false;
-        bar.onDraw = function () {
-            var g = this.graphics;
-            var track = g.newBrush(g.BrushType.SOLID_COLOR, BRAND.btn);
-            g.rectPath(0, 0, this.size[0], this.size[1]);
-            g.fillPath(track);
-            var pct = Math.max(0, Math.min(100, this._percent));
-            var w = Math.round(this.size[0] * pct / 100);
-            if (w > 0) {
-                var fillColor = this._danger ? BRAND.accent : BRAND.text;
-                var fill = g.newBrush(g.BrushType.SOLID_COLOR, fillColor);
-                g.rectPath(0, 0, w, this.size[1]);
-                g.fillPath(fill);
-            }
-        };
-        bar.setPercent = function (p, danger) {
-            this._percent = (p === null) ? 0 : p;
-            this._danger = !!danger;
-            this.notify("onDraw");
-        };
-        return bar;
-    }
-
     // ---------------------------------------------------------------
-    // MONITOR UI STATE — filled in by buildUI(), read by the tick above.
+    // MONITOR UI STATE
     // ---------------------------------------------------------------
-    var cpuValueText = null, cpuBar = null;
-    var ramValueText = null, ramSubText = null, ramBar = null;
+    var cpuValueText = null, cpuBarText = null;
+    var ramValueText = null, ramSubText = null, ramBarText = null;
     var tempValueText = null, gpuValueText = null, explanationText = null;
-    var backupAgoChip = null;
+    var backupAgoText = null;
 
     function updateMonitorUI() {
         try {
@@ -764,7 +659,13 @@
                     cpuValueText.graphics.foregroundColor = cpuValueText.graphics.newPen(cpuValueText.graphics.PenType.SOLID_COLOR, cpuColor, 1);
                 } catch (e) {}
             }
-            if (cpuBar) cpuBar.setPercent(cpu, cpu !== null && cpu >= 85);
+            if (cpuBarText) {
+                cpuBarText.text = textBar(cpu);
+                try {
+                    var cbColor = (cpu !== null && cpu >= 85) ? BRAND.accent : BRAND.muted;
+                    cpuBarText.graphics.foregroundColor = cpuBarText.graphics.newPen(cpuBarText.graphics.PenType.SOLID_COLOR, cbColor, 1);
+                } catch (e) {}
+            }
 
             if (ramValueText) {
                 ramValueText.text = (ram === null) ? "—" : (ram.percent + "%");
@@ -773,7 +674,13 @@
                     ramValueText.graphics.foregroundColor = ramValueText.graphics.newPen(ramValueText.graphics.PenType.SOLID_COLOR, ramColor, 1);
                 } catch (e) {}
             }
-            if (ramBar) ramBar.setPercent(ram === null ? null : ram.percent, ram !== null && ram.percent >= 85);
+            if (ramBarText) {
+                ramBarText.text = textBar(ram === null ? null : ram.percent);
+                try {
+                    var rbColor = (ram !== null && ram.percent >= 85) ? BRAND.accent : BRAND.muted;
+                    ramBarText.graphics.foregroundColor = ramBarText.graphics.newPen(ramBarText.graphics.PenType.SOLID_COLOR, rbColor, 1);
+                } catch (e) {}
+            }
             if (ramSubText) ramSubText.text = (ram === null) ? "" : (ram.usedGB.toFixed(1) + " / " + ram.totalGB.toFixed(1) + " GB");
 
             if (tempValueText) tempValueText.text = (temp === null) ? "Not available on this system" : (temp + "°C");
@@ -792,15 +699,15 @@
             if (highNow && !wasHighLoad) appendHistory("High load detected — " + explanations.join(" / "));
             wasHighLoad = highNow;
 
-            if (backupAgoChip) {
+            if (backupAgoText) {
                 var rel = relativeTime(lastBackupDate);
-                backupAgoChip.setText(rel ? ("Last backup: " + rel) : "No backup yet this session");
+                backupAgoText.text = rel ? ("Last backup: " + rel) : "No backup yet this session";
             }
         } catch (e) {}
     }
 
     // ---------------------------------------------------------------
-    // HISTORY VIEWER — secondary window
+    // HISTORY VIEWER
     // ---------------------------------------------------------------
     function showHistoryWindow() {
         var w = new Window("palette", "Crash Guard — History", undefined, { resizeable: true });
@@ -821,15 +728,14 @@
             box.graphics.backgroundColor = box.graphics.newBrush(box.graphics.BrushType.SOLID_COLOR, BRAND.card);
         } catch (e) {}
 
-        flatButton(w, "Close", function () { w.close(); });
+        nativeButton(w, "Close", function () { w.close(); });
 
         w.center();
         w.show();
     }
 
     // ---------------------------------------------------------------
-    // UI — wrapped so a startup problem shows a readable error instead
-    // of a silently half-built panel.
+    // UI
     // ---------------------------------------------------------------
     function buildUI(thisObj) {
         try {
@@ -873,27 +779,10 @@
         if (LOGO_FILE) {
             try { header.add("image", undefined, LOGO_FILE); } catch (e) {}
         }
-
         styledText(header, "CRASH GUARD", 16, "BOLD", BRAND.text);
-
         var spacer = header.add("group");
         spacer.alignment = ["fill", "fill"];
-
-        var badge = header.add("group");
-        badge.orientation = "column";
-        badge.alignChildren = ["center", "center"];
-        badge.minimumSize = [74, 20];
-        badge.onDraw = function () {
-            var g = this.graphics;
-            var fill = g.newBrush(g.BrushType.SOLID_COLOR, BRAND.accent);
-            g.rectPath(0, 0, this.size[0], this.size[1]);
-            g.fillPath(fill);
-        };
-        var badgeText = badge.add("statictext", undefined, "by Kreevo");
-        try {
-            badgeText.graphics.font = ScriptUI.newFont(FONT, "BOLD", 10);
-            badgeText.graphics.foregroundColor = badgeText.graphics.newPen(badgeText.graphics.PenType.SOLID_COLOR, BRAND.text, 1);
-        } catch (e) {}
+        styledText(header, "by Kreevo", 11, "BOLD", BRAND.accent);
 
         if (possibleCrashDetected) {
             var crashLines = ["⚠ Last session didn't close cleanly — possible crash or freeze."];
@@ -908,33 +797,34 @@
             crashBanner.preferredSize = [330, lastKnownStateAtStartup ? 52 : 34];
         }
 
-        // ---- Tab bar ----
-        var tabRow = win.add("group");
-        tabRow.orientation = "row";
-        tabRow.alignChildren = ["fill", "fill"];
-        tabRow.spacing = 3;
+        // ---- Native tabbed panel: guaranteed to render and switch,
+        // unlike a hand-drawn tab bar. ----
+        var tabs = win.add("tabbedpanel");
+        tabs.alignChildren = ["fill", "top"];
+        tabs.preferredSize.height = 520;
 
-        var monitorPage, backupPage, cleanerPage;
-        function setActiveTab(name) {
-            monitorTab.setActive(name === "monitor");
-            backupTab.setActive(name === "backup");
-            cleanerTab.setActive(name === "cleaner");
-            monitorPage.visible = (name === "monitor");
-            backupPage.visible = (name === "backup");
-            cleanerPage.visible = (name === "cleaner");
-            try { win.layout.layout(true); win.layout.resize(); } catch (e) {}
-        }
-        var monitorTab = tabButton(tabRow, "MONITOR", function () { setActiveTab("monitor"); });
-        var backupTab = tabButton(tabRow, "BACKUP", function () { setActiveTab("backup"); });
-        var cleanerTab = tabButton(tabRow, "CLEANER", function () { setActiveTab("cleaner"); });
+        var monitorTab = tabs.add("tab", undefined, "Monitor");
+        monitorTab.orientation = "column";
+        monitorTab.alignChildren = ["fill", "top"];
+        monitorTab.spacing = 8;
+        monitorTab.margins = 10;
 
-        // ================= MONITOR PAGE =================
-        monitorPage = win.add("group");
-        monitorPage.orientation = "column";
-        monitorPage.alignChildren = ["fill", "top"];
-        monitorPage.spacing = 8;
+        var backupTab = tabs.add("tab", undefined, "Backup");
+        backupTab.orientation = "column";
+        backupTab.alignChildren = ["fill", "top"];
+        backupTab.spacing = 8;
+        backupTab.margins = 10;
 
-        var loadCard = card(monitorPage);
+        var cleanerTab = tabs.add("tab", undefined, "Cleaner");
+        cleanerTab.orientation = "column";
+        cleanerTab.alignChildren = ["fill", "top"];
+        cleanerTab.spacing = 8;
+        cleanerTab.margins = 10;
+
+        tabs.selection = monitorTab;
+
+        // ================= MONITOR TAB =================
+        var loadCard = card(monitorTab);
         styledText(loadCard, "WHY AE MIGHT BE LAGGING", 12, "BOLD", BRAND.muted);
 
         var statsRow = loadCard.add("group");
@@ -946,19 +836,19 @@
         cpuCol.orientation = "column";
         cpuCol.alignChildren = ["fill", "top"];
         cpuCol.alignment = ["fill", "top"];
-        cpuCol.spacing = 4;
+        cpuCol.spacing = 2;
         styledText(cpuCol, "CPU", 11, "BOLD", BRAND.muted);
-        cpuValueText = styledText(cpuCol, "—", 30, "BOLD", BRAND.text);
-        cpuBar = gaugeBar(cpuCol);
+        cpuValueText = styledText(cpuCol, "—", 26, "BOLD", BRAND.text);
+        cpuBarText = styledText(cpuCol, textBar(null), 13, "REGULAR", BRAND.muted);
 
         var ramCol = statsRow.add("group");
         ramCol.orientation = "column";
         ramCol.alignChildren = ["fill", "top"];
         ramCol.alignment = ["fill", "top"];
-        ramCol.spacing = 4;
+        ramCol.spacing = 2;
         styledText(ramCol, "RAM", 11, "BOLD", BRAND.muted);
-        ramValueText = styledText(ramCol, "—", 30, "BOLD", BRAND.text);
-        ramBar = gaugeBar(ramCol);
+        ramValueText = styledText(ramCol, "—", 26, "BOLD", BRAND.text);
+        ramBarText = styledText(ramCol, textBar(null), 13, "REGULAR", BRAND.muted);
         ramSubText = styledText(ramCol, "", 11, "REGULAR", BRAND.muted);
 
         var tempRow = loadCard.add("group");
@@ -984,26 +874,21 @@
 
         explanationText = loadCard.add("statictext", undefined, "", { multiline: true });
         explanationText.alignment = ["fill", "top"];
-        explanationText.preferredSize = [330, 44];
+        explanationText.preferredSize = [320, 44];
         try {
             explanationText.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 12);
             explanationText.graphics.foregroundColor = explanationText.graphics.newPen(explanationText.graphics.PenType.SOLID_COLOR, BRAND.accent, 1);
         } catch (e) {}
 
-        flatButton(monitorPage, "Check before I render", function () { checkRenderReadiness(true); });
+        nativeButton(monitorTab, "Check before I render", function () { checkRenderReadiness(true); });
 
-        // ================= BACKUP PAGE =================
-        backupPage = win.add("group");
-        backupPage.orientation = "column";
-        backupPage.alignChildren = ["fill", "top"];
-        backupPage.spacing = 8;
-
-        var autoCard = card(backupPage);
+        // ================= BACKUP TAB =================
+        var autoCard = card(backupTab);
         styledText(autoCard, "AUTO-BACKUP", 12, "BOLD", BRAND.muted);
         var backupExplain = styledText(autoCard,
             "Saves a timestamped copy into \"Kreevo_Backups\" next to your project — restore any version below if AE crashes or you lose work.",
             11, "REGULAR", BRAND.muted, true);
-        backupExplain.preferredSize = [330, 32];
+        backupExplain.preferredSize = [320, 32];
 
         var enableRow = autoCard.add("group");
         enableRow.orientation = "row";
@@ -1026,12 +911,8 @@
         maxBackupsInput.characters = 4;
         try { maxBackupsInput.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 13); } catch (e) {}
 
-        var chipRow = autoCard.add("group");
-        chipRow.orientation = "row";
-        chipRow.alignChildren = ["left", "center"];
-        chipRow.spacing = 6;
-        statusChip = chip(chipRow, settings.enabled ? "Auto-backup on" : "Auto-backup off");
-        backupAgoChip = chip(chipRow, "No backup yet this session");
+        statusText = styledText(autoCard, settings.enabled ? "Auto-backup on" : "Auto-backup off", 12, "REGULAR", BRAND.muted);
+        backupAgoText = styledText(autoCard, "No backup yet this session", 12, "REGULAR", BRAND.muted);
 
         function applySettingsFromUI() {
             settings.enabled = enableCheck.value;
@@ -1061,19 +942,19 @@
         intervalInput.onChange = applySettingsFromUI;
         maxBackupsInput.onChange = applySettingsFromUI;
 
-        var actions = backupPage.add("group");
+        var actions = backupTab.add("group");
         actions.orientation = "column";
         actions.alignChildren = ["fill", "top"];
         actions.spacing = 6;
 
-        flatButton(actions, "Back up now", function () { runBackup(false); });
-        flatButton(actions, "Run health check", runHealthCheck);
-        flatButton(actions, "View history log", showHistoryWindow);
+        nativeButton(actions, "Back up now", function () { runBackup(false); });
+        nativeButton(actions, "Run health check", runHealthCheck);
+        nativeButton(actions, "View history log", showHistoryWindow);
 
-        var restoreCard = card(backupPage);
+        var restoreCard = card(backupTab);
         styledText(restoreCard, "RECENT BACKUPS", 12, "BOLD", BRAND.muted);
         var restoreExplain = styledText(restoreCard, "Pick a version and restore it if something goes wrong.", 11, "REGULAR", BRAND.muted, true);
-        restoreExplain.preferredSize = [330, 16];
+        restoreExplain.preferredSize = [320, 16];
 
         var backupDropdown = restoreCard.add("dropdownlist", undefined, []);
         backupDropdown.alignment = ["fill", "top"];
@@ -1096,7 +977,7 @@
         restoreActions.alignChildren = ["fill", "top"];
         restoreActions.spacing = 6;
 
-        flatButton(restoreActions, "Restore selected", function () {
+        nativeButton(restoreActions, "Restore selected", function () {
             var idx = backupDropdown.selection ? backupDropdown.selection.index : -1;
             if (idx < 0 || !backupDropdown._files || !backupDropdown._files[idx]) {
                 alert("Select a backup from the list first.");
@@ -1104,32 +985,27 @@
             }
             restoreBackup(backupDropdown._files[idx]);
         });
-        flatButton(restoreActions, "Refresh list", refreshBackupList);
+        nativeButton(restoreActions, "Refresh list", refreshBackupList);
 
-        // ================= CLEANER PAGE =================
-        cleanerPage = win.add("group");
-        cleanerPage.orientation = "column";
-        cleanerPage.alignChildren = ["fill", "top"];
-        cleanerPage.spacing = 8;
-
-        var cleanCard = card(cleanerPage);
+        // ================= CLEANER TAB =================
+        var cleanCard = card(cleanerTab);
         styledText(cleanCard, "PROJECT CLEANER", 12, "BOLD", BRAND.muted);
         var cleanExplain = styledText(cleanCard,
             "Housekeeping that keeps every project running smoothly — do this every so often, not just when something breaks.",
             11, "REGULAR", BRAND.muted, true);
-        cleanExplain.preferredSize = [330, 30];
+        cleanExplain.preferredSize = [320, 30];
 
-        flatButton(cleanCard, "Remove unused footage", cleanerRemoveUnused);
+        nativeButton(cleanCard, "Remove unused footage", cleanerRemoveUnused);
         var removeExplain = styledText(cleanCard, "Deletes project items nothing in your comps actually uses.", 11, "REGULAR", BRAND.muted, true);
-        removeExplain.preferredSize = [330, 16];
+        removeExplain.preferredSize = [320, 16];
 
-        flatButton(cleanCard, "Consolidate duplicate footage", cleanerConsolidate);
+        nativeButton(cleanCard, "Consolidate duplicate footage", cleanerConsolidate);
         var consolidateExplain = styledText(cleanCard, "Merges footage imported more than once into a single item.", 11, "REGULAR", BRAND.muted, true);
-        consolidateExplain.preferredSize = [330, 16];
+        consolidateExplain.preferredSize = [320, 16];
 
-        flatButton(cleanCard, "Purge memory and disk caches", cleanerPurge);
-        var purgeExplain = styledText(cleanCard, "Frees up RAM immediately — use this when the SYSTEM LOAD tab shows RAM running high.", 11, "REGULAR", BRAND.muted, true);
-        purgeExplain.preferredSize = [330, 30];
+        nativeButton(cleanCard, "Purge memory and disk caches", cleanerPurge);
+        var purgeExplain = styledText(cleanCard, "Frees up RAM immediately — use this when the Monitor tab shows RAM running high.", 11, "REGULAR", BRAND.muted, true);
+        purgeExplain.preferredSize = [320, 30];
 
         // ---- wire up ----
         win.layout.layout(true);
@@ -1140,8 +1016,6 @@
             if (monitorTaskId !== null) { try { app.cancelTask(monitorTaskId); } catch (e) {} }
             clearSessionMarker();
         };
-
-        setActiveTab("monitor");
 
         if (settings.enabled) scheduleNextBackup();
         recordLastKnownState();
