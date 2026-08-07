@@ -20,10 +20,21 @@
         bg:       [0x14 / 255, 0x14 / 255, 0x14 / 255],
         card:     [0x1E / 255, 0x1E / 255, 0x1E / 255],
         accent:   [0x4A / 255, 0xDE / 255, 0x80 / 255],
+        caution:  [0xFB / 255, 0xBF / 255, 0x24 / 255],
         warn:     [0xF8 / 255, 0x71 / 255, 0x71 / 255],
         text:     [0xFF / 255, 0xFF / 255, 0xFF / 255],
         muted:    [0x9E / 255, 0x9E / 255, 0x9E / 255]
     };
+
+    // Three-tier severity color, used for CPU/RAM readouts: fine, getting
+    // heavy, struggling. Thresholds match the 85% "struggling" line used
+    // everywhere else in this file (pre-render warnings, explanations).
+    function severityColor(percent) {
+        if (percent === null) return BRAND.text;
+        if (percent >= 85) return BRAND.warn;
+        if (percent >= 60) return BRAND.caution;
+        return BRAND.accent;
+    }
 
     function getBestFont() {
         return ($.os.indexOf("Windows") !== -1) ? "Segoe UI" : "Helvetica Neue";
@@ -444,11 +455,11 @@
             app.project.file.copy(backupFile.fsName);
             cleanupOldBackups(backupFolder);
             lastBackupDate = new Date();
-            setStatus("Backed up just now");
+            setBackupStatus("Backed up just now", BRAND.accent);
             appendHistory("Backup saved — " + backupFile.name + " (" + app.project.numItems + " items)");
             return true;
         } catch (err) {
-            setStatus("Backup skipped — retrying next cycle");
+            setBackupStatus("Backup skipped — retrying next cycle", BRAND.warn);
             appendHistory("Backup failed silently — will retry next cycle");
             return false;
         }
@@ -651,6 +662,35 @@
     var ramValueText = null, ramSubText = null, ramBarText = null;
     var tempValueText = null, gpuValueText = null, explanationText = null;
     var backupAgoText = null;
+    var projectStatusText = null;
+    var backupStatusDot = null;
+
+    // Shown live in the Backup tab so "is my project saved" is never a
+    // guessing game — this is exactly what app.project.file is at this
+    // instant, not a cached assumption.
+    function updateProjectStatusText() {
+        if (!projectStatusText) return;
+        try {
+            var color = BRAND.muted;
+            if (app.project && app.project.file) {
+                projectStatusText.text = "Project: " + app.project.file.name;
+                color = BRAND.accent;
+            } else if (app.project) {
+                projectStatusText.text = "Project: not saved yet — use File > Save As";
+                color = BRAND.caution;
+            } else {
+                projectStatusText.text = "No project is open";
+            }
+            projectStatusText.graphics.foregroundColor = projectStatusText.graphics.newPen(projectStatusText.graphics.PenType.SOLID_COLOR, color, 1);
+        } catch (e) {}
+    }
+
+    function setBackupStatus(msg, dotColor) {
+        setStatus(msg);
+        if (backupStatusDot) {
+            try { backupStatusDot.graphics.backgroundColor = backupStatusDot.graphics.newBrush(backupStatusDot.graphics.BrushType.SOLID_COLOR, dotColor); } catch (e) {}
+        }
+    }
 
     function updateMonitorUI(temp, gpuTemp) {
         try {
@@ -660,14 +700,14 @@
             if (cpuValueText) {
                 cpuValueText.text = (cpu === null) ? "—" : (cpu + "%");
                 try {
-                    var cpuColor = (cpu !== null && cpu >= 85) ? BRAND.warn : BRAND.text;
+                    var cpuColor = severityColor(cpu);
                     cpuValueText.graphics.foregroundColor = cpuValueText.graphics.newPen(cpuValueText.graphics.PenType.SOLID_COLOR, cpuColor, 1);
                 } catch (e) {}
             }
             if (cpuBarText) {
                 cpuBarText.text = textBar(cpu);
                 try {
-                    var cbColor = (cpu !== null && cpu >= 85) ? BRAND.warn : BRAND.muted;
+                    var cbColor = (cpu === null) ? BRAND.muted : severityColor(cpu);
                     cpuBarText.graphics.foregroundColor = cpuBarText.graphics.newPen(cpuBarText.graphics.PenType.SOLID_COLOR, cbColor, 1);
                 } catch (e) {}
             }
@@ -675,14 +715,14 @@
             if (ramValueText) {
                 ramValueText.text = (ram === null) ? "—" : (ram.percent + "%");
                 try {
-                    var ramColor = (ram !== null && ram.percent >= 85) ? BRAND.warn : BRAND.text;
+                    var ramColor = severityColor(ram === null ? null : ram.percent);
                     ramValueText.graphics.foregroundColor = ramValueText.graphics.newPen(ramValueText.graphics.PenType.SOLID_COLOR, ramColor, 1);
                 } catch (e) {}
             }
             if (ramBarText) {
                 ramBarText.text = textBar(ram === null ? null : ram.percent);
                 try {
-                    var rbColor = (ram !== null && ram.percent >= 85) ? BRAND.warn : BRAND.muted;
+                    var rbColor = (ram === null) ? BRAND.muted : severityColor(ram.percent);
                     ramBarText.graphics.foregroundColor = ramBarText.graphics.newPen(ramBarText.graphics.PenType.SOLID_COLOR, rbColor, 1);
                 } catch (e) {}
             }
@@ -706,6 +746,7 @@
                 var rel = relativeTime(lastBackupDate);
                 backupAgoText.text = rel ? ("Last backup: " + rel) : "No backup yet this session";
             }
+            updateProjectStatusText();
         } catch (e) {}
     }
 
@@ -901,6 +942,11 @@
         // ================= BACKUP TAB =================
         var autoCard = card(backupTab);
         styledText(autoCard, "AUTO-BACKUP", 13, "BOLD", BRAND.muted);
+        // Live, not cached — always reflects app.project.file at this
+        // instant, so "is my project actually saved" is never a guess.
+        projectStatusText = styledText(autoCard, "", 12, "REGULAR", BRAND.muted, true);
+        projectStatusText.alignment = ["fill", "top"];
+        projectStatusText.minimumSize.height = 16;
         var backupExplain = styledText(autoCard,
             "Saves a timestamped copy into \"Kreevo_Backups\" next to your project — restore any version below if AE crashes or you lose work.",
             12, "REGULAR", BRAND.muted, true);
@@ -928,7 +974,16 @@
         maxBackupsInput.characters = 4;
         try { maxBackupsInput.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 14); } catch (e) {}
 
-        statusText = styledText(autoCard, settings.enabled ? "Auto-backup on" : "Auto-backup off", 13, "REGULAR", BRAND.muted);
+        var statusRow = autoCard.add("group");
+        statusRow.orientation = "row";
+        statusRow.alignChildren = ["left", "center"];
+        statusRow.spacing = 7;
+        backupStatusDot = statusRow.add("group");
+        backupStatusDot.minimumSize.width = backupStatusDot.maximumSize.width = 8;
+        backupStatusDot.minimumSize.height = backupStatusDot.maximumSize.height = 8;
+        statusText = styledText(statusRow, settings.enabled ? "Auto-backup on" : "Auto-backup off", 13, "REGULAR", BRAND.muted);
+        setBackupStatus(statusText.text, settings.enabled ? BRAND.accent : BRAND.muted);
+
         backupAgoText = styledText(autoCard, "No backup yet this session", 13, "REGULAR", BRAND.muted);
 
         function applySettingsFromUI() {
@@ -947,10 +1002,10 @@
             saveSettings(settings);
 
             if (settings.enabled) {
-                setStatus("Auto-backup on — every " + settings.intervalMinutes + " min");
+                setBackupStatus("Auto-backup on — every " + settings.intervalMinutes + " min", BRAND.accent);
                 scheduleNextBackup();
             } else {
-                setStatus("Auto-backup off");
+                setBackupStatus("Auto-backup off", BRAND.muted);
                 if (backupTaskId !== null) { try { app.cancelTask(backupTaskId); } catch (e) {} backupTaskId = null; }
             }
         }
@@ -985,6 +1040,7 @@
         restoreStatusText.minimumSize.height = 0;
 
         function refreshBackupList() {
+            updateProjectStatusText();
             backupDropdown.removeAll();
             var files = listBackups();
             for (var i = 0; i < files.length; i++) backupDropdown.add("item", files[i].name);
