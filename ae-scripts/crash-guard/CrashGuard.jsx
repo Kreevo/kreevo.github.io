@@ -37,6 +37,7 @@
     var SESSION_MARKER = new File(BASE_DIR + "/session.lock");
     var LOGO_CACHE_FILE = new File(BASE_DIR + "/logo_cache.png");
     var LAST_STATE_FILE = new File(BASE_DIR + "/last_state.txt");
+    var CPU_RAM_PS1_FILE = new File(BASE_DIR + "/cg_cpu_ram.ps1");
     var CPU_PS1_FILE = new File(BASE_DIR + "/cg_cpu.ps1");
     var RAM_PS1_FILE = new File(BASE_DIR + "/cg_ram.ps1");
     var TEMP_PS1_FILE = new File(BASE_DIR + "/cg_temp.ps1");
@@ -292,6 +293,26 @@
         return runSystemCommand(cmd);
     }
 
+    // CPU + RAM in a single PowerShell launch — every process launch is a
+    // blocking call that freezes the AE UI thread until it returns, so the
+    // common per-tick case should cost exactly one, not two or three.
+    function getWindowsCPURAM() {
+        var script = "(Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average\r\n" +
+            "$os = Get-CimInstance Win32_OperatingSystem\r\n" +
+            "$os.FreePhysicalMemory\r\n" +
+            "$os.TotalVisibleMemorySize\r\n";
+        var out = runPS1(CPU_RAM_PS1_FILE, script);
+        if (!out) return null;
+        var nums = [];
+        var lines = out.split(/\r?\n/);
+        for (var i = 0; i < lines.length; i++) {
+            var n = firstNumber(lines[i]);
+            if (n !== null) nums.push(n);
+        }
+        if (nums.length < 3) return null;
+        return { cpu: nums[0], freeKB: nums[1], totalKB: nums[2] };
+    }
+
     function getWindowsCPU() {
         var out = runPS1(CPU_PS1_FILE, "(Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average\r\n");
         var n = firstNumber(out);
@@ -370,16 +391,41 @@
         };
     }
 
-    function readSystemStats() {
+    // CPU + RAM only — called every tick, so kept to a single blocking
+    // process launch on Windows whenever possible. Temperature/GPU are
+    // fetched separately and less often (see crashGuardMonitorTick).
+    function readCoreStats() {
         try {
             if (IS_WIN) {
-                return { cpu: getWindowsCPU(), ram: getWindowsRAM(), temp: getWindowsTemp() };
+                var combined = getWindowsCPURAM();
+                if (combined && combined.totalKB > 0) {
+                    var usedKB = combined.totalKB - combined.freeKB;
+                    return {
+                        cpu: Math.round(combined.cpu),
+                        ram: {
+                            percent: Math.round((usedKB / combined.totalKB) * 100),
+                            usedGB: usedKB / 1048576,
+                            totalGB: combined.totalKB / 1048576
+                        }
+                    };
+                }
+                // Combined call failed/returned partial data — fall back
+                // to two separate simpler calls rather than show nothing.
+                return { cpu: getWindowsCPU(), ram: getWindowsRAM() };
             } else {
-                return { cpu: getMacCPULoad(), ram: getMacRAMUsage(), temp: null };
+                return { cpu: getMacCPULoad(), ram: getMacRAMUsage() };
             }
         } catch (e) {
-            return { cpu: null, ram: null, temp: null };
+            return { cpu: null, ram: null };
         }
+    }
+
+    // Kept for the manual "Check before I render" button, where one
+    // extra blocking call in response to a click is an acceptable cost.
+    function readSystemStats() {
+        var core = readCoreStats();
+        var temp = IS_WIN ? getWindowsTemp() : null;
+        return { cpu: core.cpu, ram: core.ram, temp: temp };
     }
 
     function getGPUTemp() {
@@ -580,11 +626,26 @@
     var monitorTaskId = null;
     var wasRendering = false;
     var wasHighLoad = false;
+    var monitorTickCount = 0;
+    var lastTemp = null, lastGpuTemp = null;
     function scheduleNextMonitorTick() {
-        try { monitorTaskId = app.scheduleTask("$.global.crashGuardMonitorTick()", 8000, false); } catch (e) {}
+        // Every system.callSystem launch blocks the AE UI thread until the
+        // process returns, so this interval is deliberately generous —
+        // frequent polling was making the whole app feel like it was
+        // hanging every few seconds.
+        try { monitorTaskId = app.scheduleTask("$.global.crashGuardMonitorTick()", 15000, false); } catch (e) {}
     }
     $.global.crashGuardMonitorTick = function () {
-        updateMonitorUI();
+        monitorTickCount++;
+        // Temperature/GPU change slowly and need an extra process launch
+        // each — only refresh them roughly every 4th tick (~1 minute)
+        // instead of every tick, to keep the common case to one launch.
+        var refreshTempGpu = (monitorTickCount % 4 === 1);
+        if (refreshTempGpu) {
+            lastTemp = IS_WIN ? getWindowsTemp() : null;
+            lastGpuTemp = getGPUTemp();
+        }
+        updateMonitorUI(lastTemp, lastGpuTemp);
         recordLastKnownState();
         try {
             var isRendering = !!(app.project && app.project.renderQueue && app.project.renderQueue.rendering);
@@ -647,10 +708,10 @@
     var tempValueText = null, gpuValueText = null, explanationText = null;
     var backupAgoText = null;
 
-    function updateMonitorUI() {
+    function updateMonitorUI(temp, gpuTemp) {
         try {
-            var stats = readSystemStats();
-            var cpu = stats.cpu, ram = stats.ram, temp = stats.temp;
+            var stats = readCoreStats();
+            var cpu = stats.cpu, ram = stats.ram;
 
             if (cpuValueText) {
                 cpuValueText.text = (cpu === null) ? "—" : (cpu + "%");
@@ -684,8 +745,6 @@
             if (ramSubText) ramSubText.text = (ram === null) ? "" : (ram.usedGB.toFixed(1) + " / " + ram.totalGB.toFixed(1) + " GB");
 
             if (tempValueText) tempValueText.text = (temp === null) ? "Not available on this system" : (temp + "°C");
-
-            var gpuTemp = getGPUTemp();
             if (gpuValueText) gpuValueText.text = (gpuTemp === null) ? "Not available on this system" : (gpuTemp + "°C");
 
             var explanations = [];
@@ -794,14 +853,14 @@
             crashLines.push("See BACKUP tab to restore.");
             var crashBanner = styledText(win, crashLines.join("\n"), 12, "REGULAR", BRAND.accent, true);
             crashBanner.alignment = ["fill", "top"];
-            crashBanner.preferredSize = [330, lastKnownStateAtStartup ? 52 : 34];
+            crashBanner.minimumSize.height = lastKnownStateAtStartup ? 52 : 34;
         }
 
         // ---- Native tabbed panel: guaranteed to render and switch,
         // unlike a hand-drawn tab bar. ----
         var tabs = win.add("tabbedpanel");
         tabs.alignChildren = ["fill", "top"];
-        tabs.preferredSize.height = 520;
+        tabs.alignment = ["fill", "fill"];
 
         var monitorTab = tabs.add("tab", undefined, "Monitor");
         monitorTab.orientation = "column";
@@ -862,7 +921,8 @@
         tempCol.alignment = ["fill", "top"];
         styledText(tempCol, "CPU TEMP", 11, "BOLD", BRAND.muted);
         tempValueText = styledText(tempCol, "Checking…", 12, "ITALIC", BRAND.muted, true);
-        tempValueText.preferredSize = [150, 30];
+        tempValueText.alignment = ["fill", "top"];
+        tempValueText.minimumSize.height = 30;
 
         var gpuCol = tempRow.add("group");
         gpuCol.orientation = "column";
@@ -870,11 +930,12 @@
         gpuCol.alignment = ["fill", "top"];
         styledText(gpuCol, "GPU TEMP", 11, "BOLD", BRAND.muted);
         gpuValueText = styledText(gpuCol, "Checking…", 12, "ITALIC", BRAND.muted, true);
-        gpuValueText.preferredSize = [150, 30];
+        gpuValueText.alignment = ["fill", "top"];
+        gpuValueText.minimumSize.height = 30;
 
         explanationText = loadCard.add("statictext", undefined, "", { multiline: true });
         explanationText.alignment = ["fill", "top"];
-        explanationText.preferredSize = [320, 44];
+        explanationText.minimumSize.height = 44;
         try {
             explanationText.graphics.font = ScriptUI.newFont(FONT, "REGULAR", 12);
             explanationText.graphics.foregroundColor = explanationText.graphics.newPen(explanationText.graphics.PenType.SOLID_COLOR, BRAND.accent, 1);
@@ -888,7 +949,8 @@
         var backupExplain = styledText(autoCard,
             "Saves a timestamped copy into \"Kreevo_Backups\" next to your project — restore any version below if AE crashes or you lose work.",
             11, "REGULAR", BRAND.muted, true);
-        backupExplain.preferredSize = [320, 32];
+        backupExplain.alignment = ["fill", "top"];
+        backupExplain.minimumSize.height = 32;
 
         var enableRow = autoCard.add("group");
         enableRow.orientation = "row";
@@ -954,7 +1016,8 @@
         var restoreCard = card(backupTab);
         styledText(restoreCard, "RECENT BACKUPS", 12, "BOLD", BRAND.muted);
         var restoreExplain = styledText(restoreCard, "Pick a version and restore it if something goes wrong.", 11, "REGULAR", BRAND.muted, true);
-        restoreExplain.preferredSize = [320, 16];
+        restoreExplain.alignment = ["fill", "top"];
+        restoreExplain.minimumSize.height = 16;
 
         var backupDropdown = restoreCard.add("dropdownlist", undefined, []);
         backupDropdown.alignment = ["fill", "top"];
@@ -993,19 +1056,23 @@
         var cleanExplain = styledText(cleanCard,
             "Housekeeping that keeps every project running smoothly — do this every so often, not just when something breaks.",
             11, "REGULAR", BRAND.muted, true);
-        cleanExplain.preferredSize = [320, 30];
+        cleanExplain.alignment = ["fill", "top"];
+        cleanExplain.minimumSize.height = 30;
 
         nativeButton(cleanCard, "Remove unused footage", cleanerRemoveUnused);
         var removeExplain = styledText(cleanCard, "Deletes project items nothing in your comps actually uses.", 11, "REGULAR", BRAND.muted, true);
-        removeExplain.preferredSize = [320, 16];
+        removeExplain.alignment = ["fill", "top"];
+        removeExplain.minimumSize.height = 16;
 
         nativeButton(cleanCard, "Consolidate duplicate footage", cleanerConsolidate);
         var consolidateExplain = styledText(cleanCard, "Merges footage imported more than once into a single item.", 11, "REGULAR", BRAND.muted, true);
-        consolidateExplain.preferredSize = [320, 16];
+        consolidateExplain.alignment = ["fill", "top"];
+        consolidateExplain.minimumSize.height = 16;
 
         nativeButton(cleanCard, "Purge memory and disk caches", cleanerPurge);
         var purgeExplain = styledText(cleanCard, "Frees up RAM immediately — use this when the Monitor tab shows RAM running high.", 11, "REGULAR", BRAND.muted, true);
-        purgeExplain.preferredSize = [320, 30];
+        purgeExplain.alignment = ["fill", "top"];
+        purgeExplain.minimumSize.height = 30;
 
         // ---- wire up ----
         win.layout.layout(true);
@@ -1019,7 +1086,9 @@
 
         if (settings.enabled) scheduleNextBackup();
         recordLastKnownState();
-        updateMonitorUI();
+        lastTemp = IS_WIN ? getWindowsTemp() : null;
+        lastGpuTemp = getGPUTemp();
+        updateMonitorUI(lastTemp, lastGpuTemp);
         scheduleNextMonitorTick();
 
         return win;
