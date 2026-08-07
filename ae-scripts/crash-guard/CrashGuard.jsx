@@ -38,8 +38,6 @@
     var LOGO_CACHE_FILE = new File(BASE_DIR + "/logo_cache.png");
     var LAST_STATE_FILE = new File(BASE_DIR + "/last_state.txt");
     var CPU_RAM_PS1_FILE = new File(BASE_DIR + "/cg_cpu_ram.ps1");
-    var CPU_PS1_FILE = new File(BASE_DIR + "/cg_cpu.ps1");
-    var RAM_PS1_FILE = new File(BASE_DIR + "/cg_ram.ps1");
     var TEMP_PS1_FILE = new File(BASE_DIR + "/cg_temp.ps1");
 
     function ensureBaseDir() {
@@ -293,10 +291,28 @@
         return runSystemCommand(cmd);
     }
 
-    // CPU + RAM in a single PowerShell launch — every process launch is a
-    // blocking call that freezes the AE UI thread until it returns, so the
-    // common per-tick case should cost exactly one, not two or three.
+    // CPU + RAM, tried the fastest way first. Every process launch is a
+    // blocking call that freezes the whole AE UI until it returns — wmic
+    // is a small native executable that starts almost instantly, while
+    // powershell.exe has to load the .NET runtime and host first, which
+    // can take seconds. wmic needs two calls instead of PowerShell's one,
+    // but two fast launches still beat one slow one; PowerShell is kept
+    // only as a fallback for Windows builds where wmic was removed.
     function getWindowsCPURAM() {
+        var cpuOut = runSystemCommand("wmic cpu get loadpercentage");
+        var cpu = firstNumber(cpuOut);
+        var memOut = runSystemCommand("wmic OS get FreePhysicalMemory,TotalVisibleMemorySize /Value");
+        var freeKB = null, totalKB = null;
+        if (memOut) {
+            var fm = memOut.match(/FreePhysicalMemory=(\d+)/);
+            var tm = memOut.match(/TotalVisibleMemorySize=(\d+)/);
+            if (fm) freeKB = parseFloat(fm[1]);
+            if (tm) totalKB = parseFloat(tm[1]);
+        }
+        if (cpu !== null && freeKB !== null && totalKB !== null) {
+            return { cpu: cpu, freeKB: freeKB, totalKB: totalKB };
+        }
+
         var script = "(Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average\r\n" +
             "$os = Get-CimInstance Win32_OperatingSystem\r\n" +
             "$os.FreePhysicalMemory\r\n" +
@@ -311,46 +327,6 @@
         }
         if (nums.length < 3) return null;
         return { cpu: nums[0], freeKB: nums[1], totalKB: nums[2] };
-    }
-
-    function getWindowsCPU() {
-        var out = runPS1(CPU_PS1_FILE, "(Get-CimInstance Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average\r\n");
-        var n = firstNumber(out);
-        if (n !== null) return Math.round(n);
-        var wmicOut = runSystemCommand("wmic cpu get loadpercentage");
-        n = firstNumber(wmicOut);
-        return n === null ? null : Math.round(n);
-    }
-
-    function getWindowsRAM() {
-        var out = runPS1(RAM_PS1_FILE,
-            "$os = Get-CimInstance Win32_OperatingSystem\r\nWrite-Output $os.FreePhysicalMemory\r\nWrite-Output $os.TotalVisibleMemorySize\r\n");
-        var freeKB = null, totalKB = null;
-        if (out) {
-            var lines = out.split(/\r?\n/);
-            var nums = [];
-            for (var i = 0; i < lines.length; i++) {
-                var n = firstNumber(lines[i]);
-                if (n !== null) nums.push(n);
-            }
-            if (nums.length >= 2) { freeKB = nums[0]; totalKB = nums[1]; }
-        }
-        if (freeKB === null || totalKB === null) {
-            var wmicOut = runSystemCommand("wmic OS get FreePhysicalMemory,TotalVisibleMemorySize /Value");
-            if (wmicOut) {
-                var fm = wmicOut.match(/FreePhysicalMemory=(\d+)/);
-                var tm = wmicOut.match(/TotalVisibleMemorySize=(\d+)/);
-                if (fm) freeKB = parseFloat(fm[1]);
-                if (tm) totalKB = parseFloat(tm[1]);
-            }
-        }
-        if (freeKB === null || totalKB === null || totalKB <= 0) return null;
-        var usedKB = totalKB - freeKB;
-        return {
-            percent: Math.round((usedKB / totalKB) * 100),
-            usedGB: usedKB / 1048576,
-            totalGB: totalKB / 1048576
-        };
     }
 
     function getWindowsTemp() {
@@ -409,9 +385,9 @@
                         }
                     };
                 }
-                // Combined call failed/returned partial data — fall back
-                // to two separate simpler calls rather than show nothing.
-                return { cpu: getWindowsCPU(), ram: getWindowsRAM() };
+                // Both wmic and PowerShell failed inside getWindowsCPURAM —
+                // give up rather than launching yet more blocking processes.
+                return { cpu: null, ram: null };
             } else {
                 return { cpu: getMacCPULoad(), ram: getMacRAMUsage() };
             }
@@ -626,25 +602,20 @@
     var monitorTaskId = null;
     var wasRendering = false;
     var wasHighLoad = false;
-    var monitorTickCount = 0;
     var lastTemp = null, lastGpuTemp = null;
     function scheduleNextMonitorTick() {
         // Every system.callSystem launch blocks the AE UI thread until the
         // process returns, so this interval is deliberately generous —
         // frequent polling was making the whole app feel like it was
         // hanging every few seconds.
-        try { monitorTaskId = app.scheduleTask("$.global.crashGuardMonitorTick()", 15000, false); } catch (e) {}
+        try { monitorTaskId = app.scheduleTask("$.global.crashGuardMonitorTick()", 20000, false); } catch (e) {}
     }
     $.global.crashGuardMonitorTick = function () {
-        monitorTickCount++;
-        // Temperature/GPU change slowly and need an extra process launch
-        // each — only refresh them roughly every 4th tick (~1 minute)
-        // instead of every tick, to keep the common case to one launch.
-        var refreshTempGpu = (monitorTickCount % 4 === 1);
-        if (refreshTempGpu) {
-            lastTemp = IS_WIN ? getWindowsTemp() : null;
-            lastGpuTemp = getGPUTemp();
-        }
+        // Temperature is intentionally NOT auto-refreshed here: the WMI
+        // thermal-zone query it depends on can be slow or even hang on
+        // some systems, which would turn a background tick into a long,
+        // unpredictable freeze. Temp/GPU only refresh when the user asks
+        // for them (Refresh temps button, or Check before I render).
         updateMonitorUI(lastTemp, lastGpuTemp);
         recordLastKnownState();
         try {
@@ -920,7 +891,7 @@
         tempCol.alignChildren = ["left", "top"];
         tempCol.alignment = ["fill", "top"];
         styledText(tempCol, "CPU TEMP", 11, "BOLD", BRAND.muted);
-        tempValueText = styledText(tempCol, "Checking…", 12, "ITALIC", BRAND.muted, true);
+        tempValueText = styledText(tempCol, "Tap \"Refresh temperatures\" below", 12, "ITALIC", BRAND.muted, true);
         tempValueText.alignment = ["fill", "top"];
         tempValueText.minimumSize.height = 30;
 
@@ -929,7 +900,7 @@
         gpuCol.alignChildren = ["left", "top"];
         gpuCol.alignment = ["fill", "top"];
         styledText(gpuCol, "GPU TEMP", 11, "BOLD", BRAND.muted);
-        gpuValueText = styledText(gpuCol, "Checking…", 12, "ITALIC", BRAND.muted, true);
+        gpuValueText = styledText(gpuCol, "Tap \"Refresh temperatures\" below", 12, "ITALIC", BRAND.muted, true);
         gpuValueText.alignment = ["fill", "top"];
         gpuValueText.minimumSize.height = 30;
 
@@ -942,6 +913,11 @@
         } catch (e) {}
 
         nativeButton(monitorTab, "Check before I render", function () { checkRenderReadiness(true); });
+        nativeButton(monitorTab, "Refresh temperatures", function () {
+            lastTemp = IS_WIN ? getWindowsTemp() : null;
+            lastGpuTemp = getGPUTemp();
+            updateMonitorUI(lastTemp, lastGpuTemp);
+        });
 
         // ================= BACKUP TAB =================
         var autoCard = card(backupTab);
@@ -1086,8 +1062,9 @@
 
         if (settings.enabled) scheduleNextBackup();
         recordLastKnownState();
-        lastTemp = IS_WIN ? getWindowsTemp() : null;
-        lastGpuTemp = getGPUTemp();
+        // Temperature is not fetched automatically on open — only when the
+        // user taps "Refresh temperatures" — since that query can be slow
+        // on some systems and shouldn't be part of the panel's startup cost.
         updateMonitorUI(lastTemp, lastGpuTemp);
         scheduleNextMonitorTick();
 
