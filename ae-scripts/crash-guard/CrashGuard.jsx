@@ -465,9 +465,25 @@
         }
     }
 
+    // Uses a string mask ("*.aep") rather than a JS callback passed into
+    // getFiles(). The callback form re-enters JS from native code once per
+    // file during the directory walk, which has been an observed source of
+    // AfterFX.exe crashes on some systems (seen with OneDrive-synced
+    // project folders) — a string mask lets the OS do the filtering
+    // natively with no callback in the loop, which is the well-established
+    // stable pattern for ExtendScript folder scans.
+    function getAepFiles(folder) {
+        var raw = folder.getFiles("*.aep");
+        var files = [];
+        for (var i = 0; i < raw.length; i++) {
+            if (raw[i] instanceof File) files.push(raw[i]);
+        }
+        return files;
+    }
+
     function cleanupOldBackups(backupFolder) {
         try {
-            var files = backupFolder.getFiles(function (f) { return f instanceof File && /\.aep$/i.test(f.name); });
+            var files = getAepFiles(backupFolder);
             files.sort(function (a, b) { return a.created - b.created; });
             var excess = files.length - settings.maxBackups;
             for (var i = 0; i < excess; i++) files[i].remove();
@@ -477,7 +493,7 @@
     function listBackups() {
         var backupFolder = getBackupFolder();
         if (!backupFolder) return [];
-        var files = backupFolder.getFiles(function (f) { return f instanceof File && /\.aep$/i.test(f.name); });
+        var files = getAepFiles(backupFolder);
         files.sort(function (a, b) { return b.created - a.created; });
         return files;
     }
@@ -668,8 +684,8 @@
         var c = parent.add("group");
         c.orientation = "column";
         c.alignChildren = ["fill", "top"];
-        c.spacing = 10;
-        c.margins = 14;
+        c.spacing = 6;
+        c.margins = 10;
         try {
             c.graphics.backgroundColor = c.graphics.newBrush(c.graphics.BrushType.SOLID_COLOR, BRAND.card);
         } catch (e) {}
@@ -829,9 +845,14 @@
 
         win.orientation = "column";
         win.alignChildren = ["fill", "top"];
-        win.spacing = 10;
-        win.margins = 18;
+        win.spacing = 6;
+        win.margins = 12;
         win.preferredSize.width = 390;
+        // A tall default fights the dockable-panel layout for space from
+        // whatever is docked below it (typically the Timeline) — this
+        // keeps the panel's own opening ask modest. Users can still drag
+        // the dock divider taller if they want more room.
+        win.preferredSize.height = 480;
 
         try { win.graphics.backgroundColor = win.graphics.newBrush(win.graphics.BrushType.SOLID_COLOR, BRAND.bg); } catch (e) {}
 
@@ -877,20 +898,20 @@
         var monitorTab = tabs.add("tab", undefined, "Monitor");
         monitorTab.orientation = "column";
         monitorTab.alignChildren = ["fill", "top"];
-        monitorTab.spacing = 10;
-        monitorTab.margins = 12;
+        monitorTab.spacing = 6;
+        monitorTab.margins = 8;
 
         var backupTab = tabs.add("tab", undefined, "Backup");
         backupTab.orientation = "column";
         backupTab.alignChildren = ["fill", "top"];
-        backupTab.spacing = 10;
-        backupTab.margins = 12;
+        backupTab.spacing = 6;
+        backupTab.margins = 8;
 
         var cleanerTab = tabs.add("tab", undefined, "Cleaner");
         cleanerTab.orientation = "column";
         cleanerTab.alignChildren = ["fill", "top"];
-        cleanerTab.spacing = 10;
-        cleanerTab.margins = 12;
+        cleanerTab.spacing = 6;
+        cleanerTab.margins = 8;
 
         tabs.selection = monitorTab;
 
