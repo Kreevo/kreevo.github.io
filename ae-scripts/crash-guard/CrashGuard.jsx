@@ -430,8 +430,23 @@
     // ---------------------------------------------------------------
     // BACKUP CORE
     // ---------------------------------------------------------------
+    // Reproduced twice: AfterFX.exe hard-crashed (native, not a catchable
+    // JS error) the first time Kreevo_Backups was created inside a
+    // OneDrive-synced folder. The trigger is most likely OneDrive's Files
+    // On-Demand cloud placeholders intercepting the folder-creation call in
+    // a way the legacy ExtendScript File API wasn't built to expect — this
+    // is a known category of issue for older apps writing into synced
+    // folders, independent of anything in this script's logic. Since a
+    // native crash can't be caught or recovered from once triggered, the
+    // only reliable fix is to never attempt the create() in the first
+    // place when the project lives under a cloud-sync folder.
+    function isCloudSyncPath(path) {
+        return /onedrive|dropbox|google ?drive|icloud ?drive/i.test(path);
+    }
+
     function getBackupFolder() {
         if (!(app.project && app.project.file)) return null;
+        if (isCloudSyncPath(app.project.file.fsName)) return null;
         var backupFolder = new Folder(app.project.file.parent.fsName + "/Kreevo_Backups");
         if (!backupFolder.exists) backupFolder.create();
         return backupFolder;
@@ -444,6 +459,11 @@
     function runBackup(silent) {
         if (!(app.project && app.project.file)) {
             if (!silent) alert("Save your project once with a name before backing up.");
+            return false;
+        }
+        if (isCloudSyncPath(app.project.file.fsName)) {
+            setBackupStatus("Backup disabled — project is in a cloud-sync folder", BRAND.caution);
+            if (!silent) alert("This project is inside a OneDrive/Dropbox/Google Drive folder.\n\nCrash Guard skips backups there — creating the backup folder crashed After Effects in testing. Save a copy of your project outside that synced folder to use auto-backup.");
             return false;
         }
         try {
@@ -709,7 +729,10 @@
         if (!projectStatusText) return;
         try {
             var color = BRAND.muted;
-            if (app.project && app.project.file) {
+            if (app.project && app.project.file && isCloudSyncPath(app.project.file.fsName)) {
+                projectStatusText.text = "Project: " + app.project.file.name + " (backups disabled — cloud-sync folder)";
+                color = BRAND.caution;
+            } else if (app.project && app.project.file) {
                 projectStatusText.text = "Project: " + app.project.file.name;
                 color = BRAND.accent;
             } else if (app.project) {
@@ -1098,6 +1121,9 @@
             } else if (!app.project.file) {
                 restoreStatusText.text = "This project isn't saved yet — use File > Save As first, so Crash Guard knows where to keep backups.";
                 restoreStatusText.minimumSize.height = 32;
+            } else if (isCloudSyncPath(app.project.file.fsName)) {
+                restoreStatusText.text = "Backups are disabled for this project — it's in a OneDrive/Dropbox/Google Drive folder, which crashed After Effects in testing. Save a copy outside that folder to use backups.";
+                restoreStatusText.minimumSize.height = 44;
             } else {
                 restoreStatusText.text = "No backups found yet in \"Kreevo_Backups\" next to this project.";
                 restoreStatusText.minimumSize.height = 17;
