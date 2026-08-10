@@ -72,7 +72,14 @@
     // cached locally in plain key=value form (same style as settings,
     // no JSON dependency) so every later panel open just reads a local
     // file — no network call, no blocking, on every normal launch.
+    //
+    // REQUIRE_LICENSE_CHECK gates whether this build enforces activation
+    // at all — set to false for distribution channels (aescripts+aeplugins)
+    // that already gate downloads to verified purchasers on their own
+    // platform, where a second Gumroad check is redundant and irrelevant.
+    // This is the only line that differs between the two builds.
     // ---------------------------------------------------------------
+    var REQUIRE_LICENSE_CHECK = true;
     var GUMROAD_PRODUCT_ID = "NTOA03qkghY_5wjchvVgOw==";
 
     function loadLicenseState() {
@@ -1013,7 +1020,7 @@
             ? thisObj
             : new Window("palette", "Crash Guard by Kreevo", undefined, { resizeable: true });
 
-        if (!isLicensed()) {
+        if (REQUIRE_LICENSE_CHECK && !isLicensed()) {
             return buildLicenseGate(win);
         }
 
