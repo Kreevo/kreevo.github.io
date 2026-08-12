@@ -1,5 +1,5 @@
 {
-  "version": "1.4.2",
-  "notes": "Text tab is AE-only for now; SFX works on both AE and Premiere. Free/Premium tiers + Gumroad licensing + purchase link added.",
+  "version": "1.4.3",
+  "notes": "Fixed a real crash: tapping Contact Support broke the whole panel (mailto: link). Locked-item prompt now mentions the license key field too.",
   "url": "https://kreevo.github.io/creatorstash/CreatorStash.zip"
 }
