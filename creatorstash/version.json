@@ -1,5 +1,5 @@
 {
-  "version": "1.4.1",
-  "notes": "Text tab is AE-only for now; SFX works on both AE and Premiere. Free/Premium tiers + Gumroad licensing added.",
+  "version": "1.4.2",
+  "notes": "Text tab is AE-only for now; SFX works on both AE and Premiere. Free/Premium tiers + Gumroad licensing + purchase link added.",
   "url": "https://kreevo.github.io/creatorstash/CreatorStash.zip"
 }
