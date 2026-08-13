@@ -1,5 +1,5 @@
 {
-  "version": "1.5.0",
-  "notes": "New original AE Text preset: Multi-Line Reveal — type up to 3 lines, get a staggered cascading animation. Creates its own text layers, no selection needed.",
+  "version": "1.5.1",
+  "notes": "Multi-Line Reveal moved out to its own dedicated product, MotionType by Kreevo (see kreevo.github.io/motiontype).",
   "url": "https://kreevo.github.io/creatorstash/CreatorStash.zip"
 }
