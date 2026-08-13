@@ -1,5 +1,5 @@
 {
-  "version": "1.4.4",
-  "notes": "Contact Support now copies the email to your clipboard instead of trying to launch a mail app (mailto: links proved unreliable across systems).",
+  "version": "1.5.0",
+  "notes": "New original AE Text preset: Multi-Line Reveal — type up to 3 lines, get a staggered cascading animation. Creates its own text layers, no selection needed.",
   "url": "https://kreevo.github.io/creatorstash/CreatorStash.zip"
 }
