@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
-  "notes": "First release: Multi-Line Reveal — type up to 3 lines, get a staggered cascading text animation in After Effects.",
+  "version": "1.5.0",
+  "notes": "Bug-fix release: fixed a CSS bug that could leave the Buy Premium link visibly clickable when it shouldn't be, unified how Word Stack Pop splits typed text so it matches its sibling presets, and fixed a bug where switching presets after typing text with \"|\" in it could silently drop part of what you typed. Expanded to 15 original AE text-motion presets.",
   "url": "https://kreevo.github.io/motiontype/MotionType.zip"
 }
