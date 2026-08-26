@@ -1,5 +1,5 @@
 {
-  "version": "1.6.0",
-  "notes": "Launch pricing: Multi-Line Reveal is free, the other 14 presets are Premium (license key required).",
+  "version": "1.6.1",
+  "notes": "Connected to the live Gumroad product: license activation and the Buy Premium link now point to kreevo.gumroad.com/l/motiontype.",
   "url": "https://kreevo.github.io/motiontype/MotionType.zip"
 }
