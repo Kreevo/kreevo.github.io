@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kreevo — Digital Products by Ryuvzaki</title>
+<title>Kreevo — Tools for editors who move fast</title>
+<link rel="icon" type="image/png" href="assets/brand/favicon.png">
+<meta name="description" content="After Effects & Premiere Pro tools, text animations and sound effects by Kreevo.">
+<meta property="og:image" content="assets/brand/og.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -252,6 +255,11 @@
     box-shadow: var(--shadow-hover);
     border-color: transparent;
   }
+
+  .product-img.has-cover { height: auto; aspect-ratio: 16 / 9; background: #0e0e10; }
+  .product-img.has-cover img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform var(--transition); }
+  .product-card:hover .product-img.has-cover img { transform: scale(1.04); }
+  .hero h1 em { color: #ff6228 !important; }
   .product-img {
     width: 100%; height: 220px;
     background: var(--bg2);
@@ -604,9 +612,9 @@
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-badge">New products weekly</div>
-  <h1>Digital<br><em>Products</em><br>That Hit.</h1>
-  <p class="hero-desc">Premium tools, scripts & resources for creators who move fast. Built by Ryuvzaki.</p>
+  <div class="hero-badge">After Effects · Premiere Pro · SFX</div>
+  <h1>Tools for<br>editors who<br><em>move fast.</em></h1>
+  <p class="hero-desc">Sound effects, text animations and workflow tools that live right inside After Effects and Premiere Pro. Built by an editor, for editors.</p>
   <div class="hero-btns">
     <a href="#products" class="btn-primary">Browse Products →</a>
     <a href="#how" class="btn-secondary">How it works ↓</a>
@@ -648,10 +656,9 @@
     <div class="products-grid" id="productsGrid">
 
       <div class="product-card" data-cat="ae" onclick="openModal('creatorstash')">
-        <div class="product-img">
-          <div class="product-img-bg">CS</div>
+        <div class="product-img has-cover">
+          <img src="assets/brand/cs_cover.jpg" alt="creatorstash" loading="lazy">
           <div class="product-badge-new">NEW</div>
-          <div class="product-icon">🔊</div>
         </div>
         <div class="product-info">
           <div class="product-cat">AE + Premiere Extension</div>
@@ -664,10 +671,9 @@
         </div>
       </div>
       <div class="product-card" data-cat="ae" onclick="openModal('motiontype')">
-        <div class="product-img">
-          <div class="product-img-bg">MT</div>
+        <div class="product-img has-cover">
+          <img src="assets/brand/mt_cover.jpg" alt="motiontype" loading="lazy">
           
-          <div class="product-icon">✍️</div>
         </div>
         <div class="product-info">
           <div class="product-cat">After Effects Extension</div>
@@ -680,10 +686,9 @@
         </div>
       </div>
       <div class="product-card" data-cat="sfx" onclick="openModal('sfxpack')">
-        <div class="product-img">
-          <div class="product-img-bg">SFX</div>
+        <div class="product-img has-cover">
+          <img src="assets/brand/sfx_cover.jpg" alt="sfxpack" loading="lazy">
           
-          <div class="product-icon">🎧</div>
         </div>
         <div class="product-info">
           <div class="product-cat">Sound Effects</div>
@@ -696,10 +701,9 @@
         </div>
       </div>
       <div class="product-card" data-cat="ae" onclick="openModal('crashguard')">
-        <div class="product-img">
-          <div class="product-img-bg">CG</div>
+        <div class="product-img has-cover">
+          <img src="assets/brand/cg_cover.jpg" alt="crashguard" loading="lazy">
           
-          <div class="product-icon">🛡️</div>
         </div>
         <div class="product-info">
           <div class="product-cat">After Effects Tool</div>
