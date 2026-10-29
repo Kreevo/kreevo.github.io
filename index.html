@@ -613,12 +613,12 @@
   </div>
   <div class="hero-stats">
     <div class="stat">
-      <div class="stat-num">10+</div>
+      <div class="stat-num">5</div>
       <div class="stat-label">Products</div>
     </div>
     <div class="stat">
-      <div class="stat-num">$1</div>
-      <div class="stat-label">Starting price</div>
+      <div class="stat-num">Free</div>
+      <div class="stat-label">versions to try</div>
     </div>
     <div class="stat">
       <div class="stat-num">AE</div>
@@ -641,25 +641,73 @@
     <div class="filter-tabs">
       <button class="filter-tab active" onclick="filterProducts('all', this)">All</button>
       <button class="filter-tab" onclick="filterProducts('ae', this)">After Effects</button>
-      <button class="filter-tab" onclick="filterProducts('design', this)">Design</button>
+      <button class="filter-tab" onclick="filterProducts('sfx', this)">Sound Effects</button>
       <button class="filter-tab" onclick="filterProducts('free', this)">Free</button>
     </div>
 
     <div class="products-grid" id="productsGrid">
 
-      <div class="product-card" data-cat="ae" onclick="openModal('motionvault')">
+      <div class="product-card" data-cat="ae" onclick="openModal('creatorstash')">
         <div class="product-img">
-          <div class="product-img-bg">MV</div>
+          <div class="product-img-bg">CS</div>
           <div class="product-badge-new">NEW</div>
-          <div class="product-icon">⚡</div>
+          <div class="product-icon">🔊</div>
         </div>
         <div class="product-info">
-          <div class="product-cat">After Effects Script</div>
-          <div class="product-name">MotionVault</div>
-          <div class="product-desc">32 expressions, favorites, auto-update. The only expression library you need.</div>
+          <div class="product-cat">AE + Premiere Extension</div>
+          <div class="product-name">CreatorStash</div>
+          <div class="product-desc">45 SFX + 21 text presets, one click away inside After Effects & Premiere Pro.</div>
           <div class="product-footer">
-            <div class="product-price">$1 <span>one-time</span></div>
-            <button class="btn-buy" onclick="event.stopPropagation()">Get it →</button>
+            <div class="product-price">$5.99 <span>one-time</span></div>
+            <a class="btn-buy" href="https://kreevo.gumroad.com/l/CreatorStashPremium" target="_blank" rel="noopener" onclick="event.stopPropagation()">Get it →</a>
+          </div>
+        </div>
+      </div>
+      <div class="product-card" data-cat="ae" onclick="openModal('motiontype')">
+        <div class="product-img">
+          <div class="product-img-bg">MT</div>
+          
+          <div class="product-icon">✍️</div>
+        </div>
+        <div class="product-info">
+          <div class="product-cat">After Effects Extension</div>
+          <div class="product-name">MotionType</div>
+          <div class="product-desc">15 one-click text animation presets. Type, click, animate.</div>
+          <div class="product-footer">
+            <div class="product-price">$3.99 <span>one-time</span></div>
+            <a class="btn-buy" href="https://kreevo.gumroad.com/l/motiontype" target="_blank" rel="noopener" onclick="event.stopPropagation()">Get it →</a>
+          </div>
+        </div>
+      </div>
+      <div class="product-card" data-cat="sfx" onclick="openModal('sfxpack')">
+        <div class="product-img">
+          <div class="product-img-bg">SFX</div>
+          
+          <div class="product-icon">🎧</div>
+        </div>
+        <div class="product-info">
+          <div class="product-cat">Sound Effects</div>
+          <div class="product-name">Ultimate SFX Pack</div>
+          <div class="product-desc">300+ hand-picked sound effects for video editors. Works in any editor.</div>
+          <div class="product-footer">
+            <div class="product-price">$3.99 <span>one-time</span></div>
+            <a class="btn-buy" href="https://kreevo.gumroad.com/l/UltimateSFXPack" target="_blank" rel="noopener" onclick="event.stopPropagation()">Get it →</a>
+          </div>
+        </div>
+      </div>
+      <div class="product-card" data-cat="ae" onclick="openModal('crashguard')">
+        <div class="product-img">
+          <div class="product-img-bg">CG</div>
+          
+          <div class="product-icon">🛡️</div>
+        </div>
+        <div class="product-info">
+          <div class="product-cat">After Effects Tool</div>
+          <div class="product-name">Crash Guard</div>
+          <div class="product-desc">Automatic versioned backups + live CPU/RAM monitor for After Effects.</div>
+          <div class="product-footer">
+            <div class="product-price">$3.99 <span>one-time</span></div>
+            <a class="btn-buy" href="https://kreevo.gumroad.com/l/crashguard" target="_blank" rel="noopener" onclick="event.stopPropagation()">Get it →</a>
           </div>
         </div>
       </div>
@@ -681,7 +729,7 @@
         </div>
       </div>
 
-      <div class="product-card" data-cat="design" style="opacity:0.6;">
+      <div class="product-card" data-cat="soon" style="opacity:0.6;">
         <div class="product-img">
           <div class="product-img-bg">??</div>
           <div class="product-icon">🔒</div>
@@ -706,30 +754,30 @@
   <div class="featured-inner">
     <div>
       <div class="featured-label">Featured Product</div>
-      <div class="featured-title">Motion<br>Vault</div>
-      <div class="featured-desc">The most complete expression library for After Effects. Used by motion designers who value their time.</div>
+      <div class="featured-title">Creator<br>Stash</div>
+      <div class="featured-desc">Stop digging through folders. Your sound effects and text animations, one click away inside After Effects and Premiere Pro.</div>
       <div class="featured-features">
-        <div class="feature-item"><div class="feature-dot"></div>32 built-in expressions across 8 categories</div>
-        <div class="feature-item"><div class="feature-dot"></div>Auto-update via GitHub — always latest</div>
-        <div class="feature-item"><div class="feature-dot"></div>Save custom expressions & export/import</div>
-        <div class="feature-item"><div class="feature-dot"></div>Favorites, History, Usage stats</div>
-        <div class="feature-item"><div class="feature-dot"></div>One-click apply to any layer property</div>
+        <div class="feature-item"><div class="feature-dot"></div>45 sound effects — whooshes, swipes, pops, impacts, risers</div>
+        <div class="feature-item"><div class="feature-dot"></div>21 text animation presets — Pop Up, Bounce In, Typewriter…</div>
+        <div class="feature-item"><div class="feature-dot"></div>Preview, then one click — it lands at your playhead</div>
+        <div class="feature-item"><div class="feature-dot"></div>Free version included — 2 SFX + 1 text preset</div>
+        <div class="feature-item"><div class="feature-dot"></div>One-time purchase, free updates forever</div>
       </div>
       <div class="featured-btns">
-        <a href="#" class="btn-white">Get for $1 →</a>
-        <a href="#" class="btn-ghost">See all features</a>
+        <a href="https://kreevo.gumroad.com/l/CreatorStashPremium" target="_blank" rel="noopener" class="btn-white">Get Premium — $5.99 →</a>
+        <a href="creatorstash/CreatorStash.zip" class="btn-ghost">Download free version</a>
       </div>
     </div>
     <div class="featured-visual">
       <div class="mock-header">
-        <div class="mock-title">MotionVault  |  by Ryuvzaki</div>
-        <div class="mock-badge">v3.0</div>
+        <div class="mock-title">CreatorStash  |  by Kreevo</div>
+        <div class="mock-badge">v1.5</div>
       </div>
-      <div class="mock-row"><div class="mock-name">Wiggle</div><div class="mock-prop">Position</div><div class="mock-uses">12x</div><div class="mock-desc">Shaky random motion</div></div>
-      <div class="mock-row"><div class="mock-name">Loop Cycle</div><div class="mock-prop">Position</div><div class="mock-uses">8x</div><div class="mock-desc">Loop animation infinitely</div></div>
-      <div class="mock-row"><div class="mock-name">Fade In Out</div><div class="mock-prop">Opacity</div><div class="mock-uses">6x</div><div class="mock-desc">Auto fade in and out</div></div>
-      <div class="mock-row"><div class="mock-name">Camera Shake</div><div class="mock-prop">Position</div><div class="mock-uses">5x</div><div class="mock-desc">Handheld camera shake</div></div>
-      <div class="mock-row"><div class="mock-name">Breathe</div><div class="mock-prop">Scale</div><div class="mock-uses">4x</div><div class="mock-desc">Gentle breathing scale</div></div>
+      <div class="mock-row"><div class="mock-name">Whoosh In</div><div class="mock-prop">SFX</div><div class="mock-uses">FREE</div><div class="mock-desc">Clean transition whoosh</div></div>
+      <div class="mock-row"><div class="mock-name">Big Whoosh</div><div class="mock-prop">SFX</div><div class="mock-uses">PRO</div><div class="mock-desc">Heavy cinematic swoosh</div></div>
+      <div class="mock-row"><div class="mock-name">Low Thud</div><div class="mock-prop">SFX</div><div class="mock-uses">PRO</div><div class="mock-desc">Deep bass impact</div></div>
+      <div class="mock-row"><div class="mock-name">Pop Up</div><div class="mock-prop">Text</div><div class="mock-uses">PRO</div><div class="mock-desc">Scale-bounce text reveal</div></div>
+      <div class="mock-row"><div class="mock-name">Typewriter</div><div class="mock-prop">Text</div><div class="mock-uses">PRO</div><div class="mock-desc">Letter-by-letter typing</div></div>
     </div>
   </div>
 </section>
@@ -787,12 +835,12 @@
     <div class="about-visual">
       <div class="about-stat-row">
         <div class="about-stat-card">
-          <div class="about-stat-num">10+</div>
+          <div class="about-stat-num">5</div>
           <div class="about-stat-label">Products</div>
         </div>
         <div class="about-stat-card">
-          <div class="about-stat-num">$1</div>
-          <div class="about-stat-label">Min price</div>
+          <div class="about-stat-num">$3.99</div>
+          <div class="about-stat-label">From</div>
         </div>
       </div>
       <div class="about-stat-row">
@@ -817,11 +865,11 @@
   </div>
   <div class="faq-item">
     <div class="faq-q" onclick="toggleFaq(this)">How do I install After Effects scripts? <span class="faq-icon">+</span></div>
-    <div class="faq-a">Copy the .jsx file to: <strong>C:\Program Files\Adobe\Adobe After Effects [version]\Support Files\Scripts\ScriptUI Panels\</strong> — then restart AE and find it under the Window menu.</div>
+    <div class="faq-a">Every product comes with an INSTALL.txt guide. For panels like CreatorStash and MotionType you copy the product folder into Adobe's CEP extensions folder, restart After Effects / Premiere Pro, then open it from <strong>Window → Extensions</strong>.</div>
   </div>
   <div class="faq-item">
     <div class="faq-q" onclick="toggleFaq(this)">Do I get free updates? <span class="faq-icon">+</span></div>
-    <div class="faq-a">Yes — all products auto-update via GitHub. Just click "Check Update" inside the panel and it installs automatically.</div>
+    <div class="faq-a">Yes — updates are free forever. The panels tell you when a new version is ready.</div>
   </div>
   <div class="faq-item">
     <div class="faq-q" onclick="toggleFaq(this)">What After Effects version do I need? <span class="faq-icon">+</span></div>
@@ -848,7 +896,7 @@
     </div>
   </div>
   <div class="footer-bottom">
-    <span>© 2025 Kreevo. All rights reserved.</span>
+    <span>© 2026 Kreevo. All rights reserved.</span>
     <span>Made with ♥ by Ryuvzaki</span>
   </div>
 </footer>
@@ -863,22 +911,37 @@
 
 <script>
 const products = {
-  motionvault: {
-    cat: 'After Effects Script',
-    title: 'MotionVault',
-    desc: 'The most complete expression library for After Effects. 32 built-in expressions, favorites, history, auto-update and much more.',
-    features: [
-      '32 built-in expressions across 8 categories',
-      'Favorites & Last Used system',
-      'Save your own custom expressions',
-      'Export / Import expression packs',
-      'Auto-update via GitHub',
-      'Multi-property apply',
-      'Expression history (last 10)',
-      'Surprise Me! button'
-    ],
-    price: '$1',
-    link: '#'
+  creatorstash: {
+    cat: 'After Effects + Premiere Pro Extension',
+    title: 'CreatorStash',
+    desc: 'Your sound effects and text animations, one click away inside After Effects and Premiere Pro. Free version included — Premium unlocks everything.',
+    features: ['45 sound effects (whooshes, swipes, pops, clicks, impacts, risers)', '21 text animation presets (After Effects)', 'Hover to preview, one click to add at your playhead', 'Search, favorites and Free/Premium filters', 'Free updates forever', 'Windows & macOS, CC 2019+'],
+    price: '$5.99',
+    link: 'https://kreevo.gumroad.com/l/CreatorStashPremium'
+  },
+  motiontype: {
+    cat: 'After Effects Extension',
+    title: 'MotionType',
+    desc: '15 ready-to-use text animation presets for After Effects. Type your text once, click a preset, done — no keyframes.',
+    features: ['Multi-Line Reveal, Word Pop, Typewriter', 'Slide, drop, pop, fade, rotate & bounce-in titles', 'Never touches your existing layers', 'Free tier included', 'One-time license, no subscription', 'After Effects CC 2018+'],
+    price: '$3.99',
+    link: 'https://kreevo.gumroad.com/l/motiontype'
+  },
+  sfxpack: {
+    cat: 'Sound Effects',
+    title: 'Ultimate SFX Pack',
+    desc: '300+ hand-picked sound effects for video editors and content creators — ready to drop on your timeline.',
+    features: ['300+ sound effects', 'Transitions, text pops, UI, impacts, risers', 'Works in Premiere, After Effects, Resolve, Final Cut, CapCut', 'Use in personal and client projects'],
+    price: '$3.99',
+    link: 'https://kreevo.gumroad.com/l/UltimateSFXPack'
+  },
+  crashguard: {
+    cat: 'After Effects Tool',
+    title: 'Crash Guard',
+    desc: 'Never lose an After Effects project to a crash again. Automatic versioned backups and a live system monitor.',
+    features: ['Automatic versioned backups (on by default)', 'One-click restore from any recent backup', 'Pre-render footage health check', 'Live CPU/RAM monitor with plain-language warnings'],
+    price: '$3.99',
+    link: 'https://kreevo.gumroad.com/l/crashguard'
   },
   expressionlib: {
     cat: 'After Effects Script — Free',
@@ -907,7 +970,7 @@ function openModal(id) {
     <div class="modal-features">${p.features.map(f => `<div class="modal-feature">${f}</div>`).join('')}</div>
     <div class="modal-footer">
       <div class="modal-price">${p.price} <small>${isFree ? '' : 'one-time'}</small></div>
-      <a href="${p.link}" class="btn-buy ${isFree ? 'btn-buy-free' : ''}" style="font-size:15px; padding:14px 32px;">
+      <a href="${p.link}" target="_blank" rel="noopener" class="btn-buy ${isFree ? 'btn-buy-free' : ''}" style="font-size:15px; padding:14px 32px;">
         ${isFree ? 'Download Free →' : 'Get it Now →'}
       </a>
     </div>
