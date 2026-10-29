@@ -622,7 +622,7 @@
   </div>
   <div class="hero-stats">
     <div class="stat">
-      <div class="stat-num">5</div>
+      <div class="stat-num">4</div>
       <div class="stat-label">Products</div>
     </div>
     <div class="stat">
@@ -651,7 +651,6 @@
       <button class="filter-tab active" onclick="filterProducts('all', this)">All</button>
       <button class="filter-tab" onclick="filterProducts('ae', this)">After Effects</button>
       <button class="filter-tab" onclick="filterProducts('sfx', this)">Sound Effects</button>
-      <button class="filter-tab" onclick="filterProducts('free', this)">Free</button>
     </div>
 
     <div class="products-grid" id="productsGrid">
@@ -713,23 +712,6 @@
           <div class="product-footer">
             <div class="product-price">$3.99 <span>one-time</span></div>
             <a class="btn-buy" href="https://kreevo.gumroad.com/l/crashguard" target="_blank" rel="noopener" onclick="event.stopPropagation()">Get it →</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="product-card" data-cat="free" onclick="openModal('expressionlib')">
-        <div class="product-img">
-          <div class="product-img-bg">EL</div>
-          <div class="product-badge-free">FREE</div>
-          <div class="product-icon">📦</div>
-        </div>
-        <div class="product-info">
-          <div class="product-cat">After Effects Script</div>
-          <div class="product-name">Expression Library</div>
-          <div class="product-desc">Classic expression library. Free forever. Great starting point.</div>
-          <div class="product-footer">
-            <div class="product-price">Free</div>
-            <button class="btn-buy btn-buy-free" onclick="event.stopPropagation()">Download →</button>
           </div>
         </div>
       </div>
@@ -840,7 +822,7 @@
     <div class="about-visual">
       <div class="about-stat-row">
         <div class="about-stat-card">
-          <div class="about-stat-num">5</div>
+          <div class="about-stat-num">4</div>
           <div class="about-stat-label">Products</div>
         </div>
         <div class="about-stat-card">
@@ -947,20 +929,6 @@ const products = {
     features: ['Automatic versioned backups (on by default)', 'One-click restore from any recent backup', 'Pre-render footage health check', 'Live CPU/RAM monitor with plain-language warnings'],
     price: '$3.99',
     link: 'https://kreevo.gumroad.com/l/crashguard'
-  },
-  expressionlib: {
-    cat: 'After Effects Script — Free',
-    title: 'Expression Library',
-    desc: 'The original expression library by Ryuvzaki. Free forever. Simple, clean, effective.',
-    features: [
-      '18 essential expressions',
-      'Search & filter by category',
-      'One-click copy to clipboard',
-      'Apply directly to layer',
-      'Dark theme matching AE'
-    ],
-    price: 'Free',
-    link: '#'
   }
 };
 
