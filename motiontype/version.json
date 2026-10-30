@@ -1,5 +1,5 @@
 {
-  "version": "1.6.1",
-  "notes": "Connected to the live Gumroad product: license activation and the Buy Premium link now point to kreevo.gumroad.com/l/motiontype.",
+  "version": "2.0.0",
+  "notes": "MotionType 2.0: 26 presets, live preview, direction, Glow, Light Sweep, SFX, align & anchor point, Bake to keyframes. Free for existing customers — use the same license key.",
   "url": "https://kreevo.github.io/motiontype/MotionType.zip"
 }
