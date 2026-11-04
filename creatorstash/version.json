@@ -1,5 +1,5 @@
 {
-  "version": "1.5.1",
-  "notes": "Multi-Line Reveal moved out to its own dedicated product, MotionType by Kreevo (see kreevo.github.io/motiontype).",
+  "version": "1.6.0",
+  "notes": "Text presets rebuilt with Text Animators: every letter or word now animates in turn, with live CS sliders to tweak timing after Apply. Live animated previews on every text preset card, and real waveforms with a playhead for every sound.",
   "url": "https://kreevo.github.io/creatorstash/CreatorStash.zip"
 }
