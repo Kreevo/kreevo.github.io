@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kreevo Creator Card</title>
+<meta name="description" content="You just got a Kreevo tool. Make your Kreevo Creator card and share it.">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="../assets/brand/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#0e0e10; --card:#18181c; --line:rgba(255,255,255,.12); --text:#f2f2f4; --muted:#9a9aa6; --accent:#ff6228; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--ink); color:var(--text); font-family:Montserrat,system-ui,sans-serif; min-height:100vh; }
+  .wrap { max-width:1040px; margin:0 auto; padding:32px 16px 56px; display:grid; gap:32px; grid-template-columns:1fr; }
+  @media (min-width:860px) { .wrap { grid-template-columns:400px 1fr; align-items:start; padding-top:56px; } }
+  .brand { font-weight:900; font-size:26px; letter-spacing:-.5px; }
+  .brand b { color:var(--accent); }
+  h1 { font-weight:900; font-size:clamp(30px,6vw,44px); line-height:1.08; margin:22px 0 12px; letter-spacing:-1px; }
+  p.lead { color:#cfcfd6; font-weight:500; line-height:1.55; font-size:16px; }
+  label { display:block; font-size:13px; font-weight:700; color:var(--muted); margin:22px 0 8px; letter-spacing:.4px; text-transform:uppercase; }
+  input, select { width:100%; background:var(--card); border:1px solid var(--line); color:var(--text); font:600 17px Montserrat,sans-serif; padding:14px 16px; border-radius:14px; outline:none; }
+  input:focus, select:focus { border-color:var(--accent); }
+  .btns { display:flex; gap:10px; margin-top:24px; flex-wrap:wrap; }
+  button { font:800 16px Montserrat,sans-serif; border:0; border-radius:999px; padding:15px 24px; cursor:pointer; }
+  .primary { background:var(--accent); color:var(--ink); }
+  .ghost { background:transparent; color:var(--text); border:1px solid var(--line); }
+  button:disabled { opacity:.5; cursor:default; }
+  .gift { margin-top:28px; background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px 20px; line-height:1.55; font-weight:500; color:#d8d8de; font-size:15px; }
+  .gift strong { color:var(--text); }
+  .preview { display:flex; justify-content:center; }
+  canvas { width:100%; max-width:420px; height:auto; aspect-ratio:9/16; border-radius:22px; box-shadow:0 30px 80px rgba(0,0,0,.55); border:1px solid var(--line); background:#111; }
+  .note { color:var(--muted); font-size:13px; margin-top:12px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section>
+    <div class="brand">kreevo<b>.</b></div>
+    <h1>Welcome to the Kreevo creators 🎉</h1>
+    <p class="lead">Thanks for your purchase. Make your personal Creator card and post it to your story — show everyone what you just unlocked.</p>
+
+    <label for="name">Your name or @username</label>
+    <input id="name" maxlength="22" placeholder="e.g. Ali or @ali.edits" autocomplete="off">
+
+    <label for="prod">What did you get?</label>
+    <select id="prod">
+      <option value="mt">MotionType 2.0</option>
+      <option value="cs">CreatorStash Premium</option>
+      <option value="sfx">Ultimate SFX Pack</option>
+      <option value="cg">Crash Guard</option>
+    </select>
+
+    <div class="btns">
+      <button class="primary" id="share">Share to story</button>
+      <button class="ghost" id="dl">Download PNG</button>
+    </div>
+
+    <div class="gift">🎁 <strong>Bonus for you:</strong> post your card to your Instagram story and tag <strong>@kreevo.assets</strong>. We'll DM you a free <strong>Ultimate SFX Pack</strong> code as a thank-you.</div>
+  </section>
+
+  <section class="preview">
+    <div style="width:100%;max-width:420px">
+      <canvas id="cv" width="1080" height="1920"></canvas>
+      <div class="note">1080×1920 · ready for Instagram stories</div>
+    </div>
+  </section>
+</div>
+
+<script>
+const P = {
+  mt:  { name:'MotionType 2.0',       line:'26 one-click text animations', col:[118,120,255], img:'../assets/brand/mt_cover.jpg' },
+  cs:  { name:'CreatorStash',         line:'SFX + text presets in one panel', col:[255,98,40],  img:'../assets/brand/cs_cover.jpg' },
+  sfx: { name:'Ultimate SFX Pack',    line:'300+ sound effects for editors', col:[52,214,130], img:'../assets/brand/sfx_cover.jpg' },
+  cg:  { name:'Crash Guard',          line:'Never lose a project again',      col:[255,70,85],  img:'../assets/brand/cg_cover.jpg' },
+};
+const W = 1080, H = 1920, INK = [14,14,16], ORANGE = 'rgb(255,98,40)';
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const nameEl = document.getElementById('name'), prodEl = document.getElementById('prod');
+const imgs = {};
+const q = new URLSearchParams(location.search);
+if (P[q.get('p')]) prodEl.value = q.get('p');
+
+function loadImg(src) {
+  return new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+}
+// deterministic noise texture (film grain), built once
+const grain = (() => {
+  const g = document.createElement('canvas'); g.width = 512; g.height = 512;
+  const gx = g.getContext('2d'), d = gx.createImageData(512, 512);
+  let s = 12345; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < d.data.length; i += 4) { const v = 128 + (rnd() - .5) * 40; d.data[i] = d.data[i+1] = d.data[i+2] = v; d.data[i+3] = 255; }
+  gx.putImageData(d, 0, 0); return g;
+})();
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+function chip(text, x, y, opt = {}) {
+  ctx.font = `${opt.weight || 600} ${opt.size || 30}px Montserrat`;
+  const w = ctx.measureText(text).width + 52, h = (opt.size || 30) + 32;
+  rr(x, y, w, h, h / 2); ctx.fillStyle = opt.fill || 'rgba(255,255,255,.07)'; ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = opt.stroke || 'rgba(255,255,255,.24)'; ctx.stroke();
+  ctx.fillStyle = opt.color || '#ececf0'; ctx.textBaseline = 'middle'; ctx.fillText(text, x + 26, y + h / 2 + 1);
+  return w;
+}
+function fitFont(text, weight, max, maxW) {
+  let s = max; do { ctx.font = `${weight} ${s}px Montserrat`; s -= 4; } while (ctx.measureText(text).width > maxW && s > 40);
+  return s + 4;
+}
+function draw() {
+  const p = P[prodEl.value], c = p.col;
+  const who = (nameEl.value || 'Your name').trim().slice(0, 22) || 'Your name';
+  // background: ink + two soft product-colour glows
+  ctx.fillStyle = `rgb(${INK})`; ctx.fillRect(0, 0, W, H);
+  const glow = (x, y, r, a) => { const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(${c},${a})`); g.addColorStop(1, `rgba(${c},0)`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); };
+  glow(W * .82, H * .36, W * .95, .55); glow(W * .1, H * .98, W * .8, .35);
+  // grid
+  ctx.strokeStyle = 'rgba(255,255,255,.05)'; ctx.lineWidth = 1;
+  for (let x = 0; x <= W; x += 45) { ctx.beginPath(); ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, H); ctx.stroke(); }
+  for (let y = 0; y <= H; y += 45) { ctx.beginPath(); ctx.moveTo(0, y + .5); ctx.lineTo(W, y + .5); ctx.stroke(); }
+  // brand mark
+  ctx.textBaseline = 'alphabetic'; ctx.font = '900 54px Montserrat'; ctx.fillStyle = '#fff'; ctx.fillText('kreevo', 90, 250);
+  ctx.fillStyle = ORANGE; ctx.fillText('.', 90 + ctx.measureText('kreevo').width, 250);
+  // unlocked chip
+  chip('✓  Just unlocked', 90, 330, { size: 30, weight: 700, fill: `rgba(${c},.18)`, stroke: `rgba(${c},.8)`, color: '#fff' });
+  // product title
+  ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#fff';
+  ctx.font = `900 ${fitFont(p.name, 900, 110, W - 180)}px Montserrat`; ctx.fillText(p.name, 86, 520);
+  ctx.font = '600 42px Montserrat'; ctx.fillStyle = '#d6d6de'; ctx.fillText(p.line, 90, 590);
+  // tilted product cover
+  const im = imgs[prodEl.value];
+  if (im) {
+    const cw = 920, ch = cw * im.height / im.width;
+    ctx.save(); ctx.translate(W / 2, 960); ctx.rotate(-4 * Math.PI / 180);
+    ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 70; ctx.shadowOffsetY = 40;
+    rr(-cw / 2 - 10, -ch / 2 - 10, cw + 20, ch + 20, 34); ctx.fillStyle = '#3c3c46'; ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.save(); rr(-cw / 2, -ch / 2, cw, ch, 26); ctx.clip(); ctx.drawImage(im, -cw / 2, -ch / 2, cw, ch); ctx.restore();
+    ctx.restore();
+  }
+  // creator block
+  ctx.font = '700 34px Montserrat'; ctx.fillStyle = `rgb(${c})`; ctx.fillText('KREEVO CREATOR', 90, 1390);
+  ctx.fillStyle = '#fff'; ctx.font = `900 ${fitFont(who, 900, 128, W - 180)}px Montserrat`; ctx.fillText(who, 86, 1520);
+  const now = new Date(), since = now.toLocaleString('en-US', { month: 'short' }) + ' ' + now.getFullYear();
+  let x = 90; x += chip('Early creator', x, 1580) + 14; chip('Since ' + since, x, 1580);
+  // footer
+  ctx.font = '700 32px Montserrat'; ctx.fillStyle = '#fff'; ctx.textBaseline = 'alphabetic'; ctx.fillText('@kreevo.assets', 90, 1790);
+  ctx.font = '600 28px Montserrat'; ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.textAlign = 'right'; ctx.fillText('kreevo.github.io', W - 90, 1790); ctx.textAlign = 'left';
+  // grain
+  ctx.globalAlpha = .07; ctx.globalCompositeOperation = 'overlay';
+  for (let gy = 0; gy < H; gy += 512) for (let gx = 0; gx < W; gx += 512) ctx.drawImage(grain, gx, gy);
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+}
+function blob() { return new Promise(r => cv.toBlob(r, 'image/png')); }
+function fileName() { return 'kreevo-creator-' + ((nameEl.value || 'card').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'card') + '.png'; }
+async function download() {
+  const b = await blob(), a = document.createElement('a');
+  a.href = URL.createObjectURL(b); a.download = fileName(); document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+document.getElementById('dl').onclick = download;
+document.getElementById('share').onclick = async () => {
+  const f = new File([await blob()], fileName(), { type: 'image/png' });
+  if (navigator.canShare && navigator.canShare({ files: [f] })) {
+    try { await navigator.share({ files: [f], title: 'Kreevo Creator' }); } catch (e) { /* user closed the sheet */ }
+  } else { download(); }
+};
+nameEl.addEventListener('input', draw); prodEl.addEventListener('change', draw);
+(async () => {
+  await Promise.all([document.fonts.load('900 100px Montserrat'), document.fonts.load('700 30px Montserrat'), document.fonts.load('600 30px Montserrat')]).catch(() => {});
+  const loaded = await Promise.all(Object.entries(P).map(async ([k, v]) => [k, await loadImg(v.img)]));
+  loaded.forEach(([k, i]) => imgs[k] = i);
+  draw();
+})();
+</script>
+</body>
+</html>
