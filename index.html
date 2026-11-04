@@ -258,8 +258,8 @@
   }
 
   .product-img.has-cover { height: auto; aspect-ratio: 16 / 9; background: #0e0e10; }
-  .product-img.has-cover img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform var(--transition); }
-  .product-card:hover .product-img.has-cover img { transform: scale(1.04); }
+  .product-img.has-cover img, .product-img.has-cover video { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform var(--transition); }
+  .product-card:hover .product-img.has-cover img, .product-card:hover .product-img.has-cover video { transform: scale(1.04); }
   .hero h1 em { color: #ff6228 !important; }
   .product-img {
     width: 100%; height: 220px;
@@ -674,7 +674,7 @@
       </div>
       <div class="product-card" data-cat="ae" onclick="openModal('creatorstash')">
         <div class="product-img has-cover">
-          <img src="assets/brand/cs_cover.jpg" alt="creatorstash" loading="lazy">
+          <video src="assets/video/creatorstash_demo.mp4" poster="assets/brand/cs_cover.jpg" autoplay muted loop playsinline preload="metadata" aria-label="CreatorStash demo"></video>
           <div class="product-badge-new">NEW</div>
         </div>
         <div class="product-info">
@@ -846,7 +846,7 @@
   </div>
   <div class="faq-item">
     <div class="faq-q" onclick="toggleFaq(this)">How do I install After Effects scripts? <span class="faq-icon">+</span></div>
-    <div class="faq-a">Every product comes with an INSTALL.txt guide. For panels like CreatorStash and MotionType you copy the product folder into Adobe's CEP extensions folder, restart After Effects / Premiere Pro, then open it from <strong>Window → Extensions</strong>.</div>
+    <div class="faq-a">Every product comes with an INSTALL.txt guide. For panels like CreatorStash and MotionType just run the included one-click installer (<strong>.bat</strong> on Windows, <strong>.command</strong> on Mac), restart After Effects / Premiere Pro, then open it from <strong>Window → Extensions</strong>.</div>
   </div>
   <div class="faq-item">
     <div class="faq-q" onclick="toggleFaq(this)">Do I get free updates? <span class="faq-icon">+</span></div>
@@ -896,7 +896,7 @@ const products = {
     cat: 'After Effects + Premiere Pro Extension',
     title: 'CreatorStash',
     desc: 'Your sound effects and text animations, one click away inside After Effects and Premiere Pro. Free version included — Premium unlocks everything.',
-    features: ['45 sound effects (whooshes, swipes, pops, clicks, impacts, risers)', '21 text animation presets (After Effects)', 'Hover to preview, one click to add at your playhead', 'Search, favorites and Free/Premium filters', 'Free updates forever', 'Windows & macOS, CC 2019+'],
+    features: ['45 sound effects (whooshes, swipes, pops, clicks, impacts, risers)', '21 text animation presets (After Effects), animated letter by letter with real Text Animators', 'Live previews: text presets play on hover, every sound shows its real waveform', 'One click to add at your playhead', 'Search, favorites and Free/Premium filters', 'Free updates forever', 'Windows & macOS, CC 2019+'],
     price: '$5.99',
     link: 'https://kreevo.gumroad.com/l/CreatorStashPremium'
   },

@@ -1,5 +1,5 @@
 {
-  "version": "1.6.0",
+  "version": "1.6.1",
   "notes": "Text presets rebuilt with Text Animators: every letter or word now animates in turn, with live CS sliders to tweak timing after Apply. Live animated previews on every text preset card, and real waveforms with a playhead for every sound.",
   "url": "https://kreevo.github.io/creatorstash/CreatorStash.zip"
 }
