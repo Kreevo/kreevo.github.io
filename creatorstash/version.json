@@ -1,5 +1,5 @@
 {
-  "version": "1.6.1",
-  "notes": "Text presets rebuilt with Text Animators: every letter or word now animates in turn, with live CS sliders to tweak timing after Apply. Live animated previews on every text preset card, and real waveforms with a playhead for every sound.",
+  "version": "1.6.2",
+  "notes": "Fixes \"Couldn't reach Gumroad\" on activation: when a firewall, antivirus, VPN or proxy blocks the panel, CreatorStash now tries other ways to connect. Small stability fixes.",
   "url": "https://kreevo.github.io/creatorstash/CreatorStash.zip"
 }
