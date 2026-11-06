@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MotionType 2.0 · Live demo · Kreevo</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="css/style.css">
+<style>body.demo .foot .status i{background:#3ddc84}.demo #home .hero p{max-width:none}#bake{display:none!important}</style>
+</head>
+<body class="demo">
+<div class="app">
+
+  <!-- HOME -->
+  <section class="view on" id="home">
+    <div class="top"><b>kreevo</b><span class="dot"></span><span class="sp"></span><span class="pill pro">LIVE DEMO</span></div>
+    <div class="menu" id="menu" hidden></div>
+    <div class="hero">
+      <div class="logo">Aa</div>
+      <div><h1><span>MotionType</span><small>2.0</small></h1><p>Text animations, one click away.</p></div>
+    </div>
+    <label class="search">⌕ <input id="search" placeholder="Search presets…"></label>
+    <div id="cats"></div>
+  </section>
+
+  <!-- PRESET -->
+  <section class="view" id="preset">
+    <div class="head">
+      <button class="back" id="back">‹</button>
+      <div><h2 id="pName">Rise</h2><p id="pCat">Text Animation</p></div>
+    </div>
+    <div class="stage"><div class="grid-bg"></div><div class="txt" id="txt"></div><div class="sweep" id="sweepFx"></div><button class="replay" id="replay">↻ Replay</button></div>
+    <input class="textin" id="textIn" value="Your text" spellcheck="false" title="Used for the preview, and for a new text layer when nothing is selected">
+
+    <div class="card">
+      <div class="row">
+        <div class="seg" id="unit"><button data-v="letter">Letter</button><button data-v="word">Word</button><button data-v="line">Line</button></div>
+        <div class="seg" id="bounce"><button data-v="1">Bounce</button><button data-v="0">Smooth</button></div>
+      </div>
+      <div class="row dirrow" id="dirRow"><span class="lbl">Direction</span>
+        <div class="seg" id="dir"><button data-v="up" title="From below">↑</button><button data-v="down" title="From above">↓</button><button data-v="left" title="From the right">←</button><button data-v="right" title="From the left">→</button></div></div>
+      <div class="sl" id="slAmount"><div class="row"><span>Amount</span><span id="vAmount"></span></div><input type="range" id="amount" min="0" max="300"></div>
+      <div class="sl"><div class="row"><span id="lDelay">Delay between letters</span><span id="vDelay"></span></div><input type="range" id="delay" min="0" max="30"></div>
+      <div class="sl"><div class="row"><span>Duration</span><span id="vDur"></span></div><input type="range" id="dur" min="1" max="40"></div>
+      <div class="sl"><div class="row"><span>Blur</span><span id="vBlur"></span></div><input type="range" id="blur" min="0" max="60"></div>
+    </div>
+
+    <div class="card">
+      <div class="fx"><div class="ic">✦</div><div class="lb"><b>Glow</b><small id="glowNote">Deep Glow if installed, else AE Glow</small></div><button class="sw" data-fx="glow"></button></div>
+      <div class="fx"><div class="ic">⟋</div><div class="lb"><b>Light Sweep</b><small>A shine passes over the text</small></div><button class="sw" data-fx="sweep"></button></div>
+      <div class="fx"><div class="ic">♪</div><div class="lb"><b>Sound effect</b><small>Synced to the animation</small></div><select class="sfxsel" id="sfxSel"></select><button class="sw" data-fx="sfx"></button></div>
+    </div>
+
+    <div class="card">
+      <div class="row"><span class="lbl">Align</span>
+        <div class="seg" id="align"><button data-v="left" title="Align left">⇤</button><button data-v="center" title="Center">≡</button><button data-v="right" title="Align right">⇥</button></div></div>
+      <div class="row" style="margin-top:10px"><span class="lbl">Anchor point</span>
+        <div class="anc" id="anchor"><button data-v="0,0"></button><button data-v="0.5,0"></button><button data-v="1,0"></button><button data-v="0,0.5"></button><button data-v="0.5,0.5"></button><button data-v="1,0.5"></button><button data-v="0,1"></button><button data-v="0.5,1"></button><button data-v="1,1"></button></div></div>
+      <small class="note">Leave unselected to keep the layer as it is.</small>
+    </div>
+
+    <div class="card">
+      <div class="lbl">Text color</div>
+      <div class="colors" id="colors"></div>
+    </div>
+
+    <button class="ghost" id="bake" style="width:100%">⤓ Bake to keyframes</button>
+  </section>
+</div>
+
+<div class="foot"><div class="in">
+  <div class="status" id="statusBox"><i></i><span id="status">Live demo · Apply works in After Effects</span></div>
+  <button class="apply" id="apply">Get it →</button>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script src="js/presets.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
