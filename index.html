@@ -649,6 +649,26 @@
     .footer-inner { flex-direction: column; gap: 24px; text-align: center; }
     .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
   }
+
+  /* BIG NEWS countdown (Launch Day: Nov 13 2026, 18:00 Tashkent = 13:00 UTC) */
+  .bignews { display: block; max-width: 640px; margin: 0 auto 34px; padding: 22px 26px 24px; border-radius: 26px; text-decoration: none; color: #fff; position: relative; overflow: hidden;
+    background: radial-gradient(90% 120% at 85% 0%, rgba(118,120,255,.55), transparent 60%), radial-gradient(70% 90% at 0% 100%, rgba(255,98,40,.35), transparent 60%), #111114;
+    box-shadow: 0 24px 60px -24px rgba(20,20,40,.55); transition: var(--transition); }
+  .bignews:hover { transform: translateY(-2px); box-shadow: 0 30px 70px -24px rgba(20,20,40,.65); }
+  .bignews::after { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.12) 50%, transparent 65%); transform: translateX(-100%); animation: bnSweep 4s 1s infinite; pointer-events: none; }
+  @keyframes bnSweep { 55%, 100% { transform: translateX(100%); } }
+  .bn-top { display: flex; align-items: center; justify-content: center; gap: 10px; font: 800 12px/1 'Montserrat', sans-serif; letter-spacing: .22em; color: #ffb59a; }
+  .bn-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff6228; box-shadow: 0 0 0 0 rgba(255,98,40,.7); animation: bnPulse 1.6s infinite; }
+  @keyframes bnPulse { 70% { box-shadow: 0 0 0 10px rgba(255,98,40,0); } 100% { box-shadow: 0 0 0 0 rgba(255,98,40,0); } }
+  .bn-title { margin-top: 10px; font: 900 clamp(24px, 4.2vw, 34px)/1.1 'Montserrat', sans-serif; letter-spacing: -.02em; }
+  .bn-clock { display: flex; justify-content: center; gap: 10px; margin-top: 16px; }
+  .bn-clock div { min-width: 70px; padding: 10px 6px 8px; border-radius: 16px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); }
+  .bn-clock b { display: block; font: 900 32px/1 'Montserrat', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .bn-clock small { display: block; margin-top: 5px; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.6); }
+  .bn-when { margin-top: 14px; font-size: 13px; color: rgba(255,255,255,.72); }
+  .bn-when u { text-decoration: none; color: #fff; font-weight: 500; }
+  .bignews.live .bn-clock { display: none; }
+  @media (max-width: 520px) { .bignews { padding: 18px 14px 20px; border-radius: 22px; } .bn-clock { gap: 6px; } .bn-clock div { min-width: 0; flex: 1; } .bn-clock b { font-size: 26px; } }
 </style>
 </head>
 <body>
@@ -667,6 +687,12 @@
 
 <!-- HERO -->
 <section class="hero">
+  <a class="bignews" id="bignews" href="https://www.instagram.com/kreevo.assets/" target="_blank" rel="noopener">
+    <div class="bn-top"><span class="bn-dot"></span><span id="bnLabel">BIG NEWS</span></div>
+    <div class="bn-title" id="bnTitle">Something big is coming.</div>
+    <div class="bn-clock" id="bnClock"><div><b id="bnD">00</b><small>days</small></div><div><b id="bnH">00</b><small>hours</small></div><div><b id="bnM">00</b><small>min</small></div><div><b id="bnS">00</b><small>sec</small></div></div>
+    <div class="bn-when" id="bnWhen">November 13 · follow <u>@kreevo.assets</u> so you don't miss it</div>
+  </a>
   <div class="hero-badge">After Effects · Premiere Pro · SFX</div>
   <h1>Tools for<br>editors who<br><em>move fast.</em></h1>
   <p class="hero-desc">Text animations, sound effects and workflow tools that live right inside After Effects and Premiere Pro. Built by editors, for editors.</p>
@@ -1122,6 +1148,36 @@ function toggleFaq(el) {
 window.addEventListener('scroll', () => {
   document.querySelector('nav').style.boxShadow = window.scrollY > 20 ? '0 2px 24px rgba(0,0,0,0.08)' : 'none';
 });
+</script>
+<script>
+// BIG NEWS countdown -> Launch Day, Nov 13 2026 18:00 Tashkent (13:00 UTC)
+(function () {
+  var T = Date.UTC(2026, 10, 13, 13, 0, 0), el = document.getElementById('bignews');
+  if (!el) return;
+  function two(n) { return (n < 10 ? '0' : '') + n; }
+  try {
+    var local = new Date(T).toLocaleString([], { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    document.getElementById('bnWhen').innerHTML = local + ' your time · follow <u>@kreevo.assets</u> so you don\'t miss it';
+  } catch (e) {}
+  function tick() {
+    var ms = T - Date.now();
+    if (ms <= 0) {
+      el.classList.add('live');
+      document.getElementById('bnLabel').textContent = "IT'S HERE";
+      document.getElementById('bnTitle').textContent = 'The big news is out. See what\'s new →';
+      document.getElementById('bnWhen').innerHTML = 'Tap to see it';
+      el.href = '#featured'; el.removeAttribute('target');
+      return;
+    }
+    var s = Math.floor(ms / 1000);
+    document.getElementById('bnD').textContent = two(Math.floor(s / 86400));
+    document.getElementById('bnH').textContent = two(Math.floor(s % 86400 / 3600));
+    document.getElementById('bnM').textContent = two(Math.floor(s % 3600 / 60));
+    document.getElementById('bnS').textContent = two(s % 60);
+    setTimeout(tick, 1000 - Date.now() % 1000);
+  }
+  tick();
+})();
 </script>
 </body>
 </html>
