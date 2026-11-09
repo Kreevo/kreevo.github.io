@@ -650,7 +650,7 @@
     .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
   }
 
-  /* BIG NEWS countdown (Launch Day: Nov 13 2026, 12 PM ET = 17:00 UTC) */
+  /* BIG NEWS countdown (Launch Day: Nov 11 2026, 12 PM ET = 17:00 UTC) */
   .bignews { display: block; max-width: 640px; margin: 0 auto 34px; padding: 22px 26px 24px; border-radius: 26px; text-decoration: none; color: #fff; position: relative; overflow: hidden;
     background: radial-gradient(90% 120% at 85% 0%, rgba(118,120,255,.55), transparent 60%), radial-gradient(70% 90% at 0% 100%, rgba(255,98,40,.35), transparent 60%), #111114;
     box-shadow: 0 24px 60px -24px rgba(20,20,40,.55); transition: var(--transition); }
@@ -691,7 +691,7 @@
     <div class="bn-top"><span class="bn-dot"></span><span id="bnLabel">BIG NEWS</span></div>
     <div class="bn-title" id="bnTitle">Something big is coming.</div>
     <div class="bn-clock" id="bnClock"><div><b id="bnD">00</b><small>days</small></div><div><b id="bnH">00</b><small>hours</small></div><div><b id="bnM">00</b><small>min</small></div><div><b id="bnS">00</b><small>sec</small></div></div>
-    <div class="bn-when" id="bnWhen">November 13 · follow <u>@kreevo.assets</u> so you don't miss it</div>
+    <div class="bn-when" id="bnWhen">November 11 · follow <u>@kreevo.assets</u> so you don't miss it</div>
   </a>
   <div class="hero-badge">After Effects · Premiere Pro · SFX</div>
   <h1>Tools for<br>editors who<br><em>move fast.</em></h1>
@@ -1150,9 +1150,9 @@ window.addEventListener('scroll', () => {
 });
 </script>
 <script>
-// BIG NEWS countdown -> Launch Day, Nov 13 2026 12 PM ET (17:00 UTC)
+// BIG NEWS countdown -> Launch Day, Nov 11 2026 12 PM ET (17:00 UTC)
 (function () {
-  var T = Date.UTC(2026, 10, 13, 17, 0, 0), el = document.getElementById('bignews');
+  var T = Date.UTC(2026, 10, 11, 17, 0, 0), el = document.getElementById('bignews');
   if (!el) return;
   function two(n) { return (n < 10 ? '0' : '') + n; }
   try {
