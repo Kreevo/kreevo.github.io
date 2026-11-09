@@ -650,7 +650,7 @@
     .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
   }
 
-  /* BIG NEWS countdown (Launch Day: Nov 13 2026, 18:00 Tashkent = 13:00 UTC) */
+  /* BIG NEWS countdown (Launch Day: Nov 13 2026, 12 PM ET = 17:00 UTC) */
   .bignews { display: block; max-width: 640px; margin: 0 auto 34px; padding: 22px 26px 24px; border-radius: 26px; text-decoration: none; color: #fff; position: relative; overflow: hidden;
     background: radial-gradient(90% 120% at 85% 0%, rgba(118,120,255,.55), transparent 60%), radial-gradient(70% 90% at 0% 100%, rgba(255,98,40,.35), transparent 60%), #111114;
     box-shadow: 0 24px 60px -24px rgba(20,20,40,.55); transition: var(--transition); }
@@ -1150,9 +1150,9 @@ window.addEventListener('scroll', () => {
 });
 </script>
 <script>
-// BIG NEWS countdown -> Launch Day, Nov 13 2026 18:00 Tashkent (13:00 UTC)
+// BIG NEWS countdown -> Launch Day, Nov 13 2026 12 PM ET (17:00 UTC)
 (function () {
-  var T = Date.UTC(2026, 10, 13, 13, 0, 0), el = document.getElementById('bignews');
+  var T = Date.UTC(2026, 10, 13, 17, 0, 0), el = document.getElementById('bignews');
   if (!el) return;
   function two(n) { return (n < 10 ? '0' : '') + n; }
   try {
