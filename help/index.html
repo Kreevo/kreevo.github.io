@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kreevo Helper</title>
+<meta name="robots" content="noindex">
+<meta name="description" content="Step-by-step help for every Kreevo tool: install, activate and fix common problems.">
+<link rel="icon" type="image/png" href="../assets/brand/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #0b0b0d; --card: #141418; --card2: #1b1b22; --ink: #e9e9f3; --mute: #9a9aa8; --line: rgba(255,255,255,.1); --accent: #7678ff; --green: #38d98a; --warn: #ffb547; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.6 'DM Sans', system-ui, sans-serif; }
+  a { color: #b3b4ff; }
+  .app { max-width: 720px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; }
+  header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: rgba(11,11,13,.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .ava { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), #a9a3ff); display: grid; place-items: center; font: 900 18px/1 Montserrat, sans-serif; color: #fff; flex: none; }
+  .who b { display: block; font: 800 16px/1.2 Montserrat, sans-serif; color: #fff; }
+  .who small { color: var(--green); font-size: 13px; }
+  .who small::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--green); margin-right: 6px; vertical-align: 1px; }
+  header .sp { flex: 1; }
+  .hbtn { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font: 500 14px/1 'DM Sans', sans-serif; cursor: pointer; }
+  .hbtn:hover { border-color: var(--accent); }
+  .hbtn[disabled] { opacity: .35; cursor: default; }
+  @media (max-width: 420px) { header { gap: 8px; padding: 12px; } .hbtn { padding: 7px 10px; font-size: 13px; } .who b { font-size: 15px; } .who small { font-size: 12px; } }
+  #chat { flex: 1; padding: 18px 16px 8px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 88%; padding: 12px 16px; border-radius: 18px; animation: pop .22s ease-out; overflow-wrap: anywhere; }
+  .bot { background: var(--card); border: 1px solid var(--line); border-top-left-radius: 6px; align-self: flex-start; }
+  .me { background: var(--accent); color: #fff; border-top-right-radius: 6px; align-self: flex-end; font-weight: 500; }
+  .bot p { margin: 0 0 8px; } .bot p:last-child { margin-bottom: 0; }
+  .bot ol, .bot ul { margin: 6px 0 8px; padding-left: 22px; } .bot li { margin: 5px 0; }
+  .bot b { color: #fff; }
+  code { font: 500 13.5px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--card2); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; color: #fff; }
+  pre { margin: 6px 0 8px; white-space: pre-wrap; word-break: break-all; font: 500 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--card2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; color: #fff; position: relative; }
+  .copy { display: inline-block; margin: 0 0 8px; background: var(--card2); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; font: 500 13px/1 'DM Sans', sans-serif; cursor: pointer; }
+  .tip { border-left: 3px solid var(--warn); background: rgba(255,181,71,.07); padding: 8px 12px; border-radius: 0 10px 10px 0; margin: 8px 0; font-size: 15px; }
+  .typing { align-self: flex-start; background: var(--card); border: 1px solid var(--line); border-radius: 18px; border-top-left-radius: 6px; padding: 14px 16px; display: flex; gap: 5px; }
+  .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--mute); animation: dot 1s infinite; }
+  .typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+  #opts { position: sticky; bottom: 0; padding: 12px 16px calc(16px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 22%); display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .opt { background: var(--card); color: #fff; border: 1px solid rgba(118,120,255,.5); border-radius: 999px; padding: 10px 16px; font: 500 15px/1.2 'DM Sans', sans-serif; cursor: pointer; text-align: left; animation: pop .2s ease-out; }
+  .opt:hover, .opt:focus-visible { background: rgba(118,120,255,.18); outline: none; }
+  .opt.main { background: var(--accent); border-color: var(--accent); }
+  .opt.mail { background: #fff; color: #111; border-color: #fff; text-decoration: none; }
+  @keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes dot { 0%, 80%, 100% { opacity: .3; } 40% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .msg, .opt { animation: none; } .typing i { animation: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="ava">K</div>
+    <div class="who"><b>Kreevo Helper</b><small>For every Kreever</small></div>
+    <div class="sp"></div>
+    <button class="hbtn" id="back" type="button" disabled>↩ Back</button>
+    <button class="hbtn" id="restart" type="button">Start over</button>
+  </header>
+  <div id="chat" aria-live="polite"></div>
+  <div id="opts"></div>
+</div>
+
+<script>
+// ------------------------------------------------------------------ data
+var MAIL = 'kreevoassets@gmail.com';
+var LIB = '<a href="https://app.gumroad.com/library" target="_blank" rel="noopener">Gumroad library</a>';
+var TOOLS = {
+  mt:   { name: 'MotionType', menu: 'MotionType by Kreevo', apps: 'After Effects + Premiere Pro', kind: 'panel', key: true, folder: 'MotionType', win: 'Install MotionType (Windows).bat', mac: 'Install MotionType (Mac).command' },
+  kt:   { name: 'Kreevo Titles', menu: 'Kreevo Titles', apps: 'Premiere Pro + After Effects', kind: 'panel', key: true, folder: 'KreevoTitles', win: 'Install Kreevo Titles (Windows).bat', mac: 'Install Kreevo Titles (Mac).command' },
+  kin:  { name: 'Kinetic', menu: 'Kinetic by Kreevo', apps: 'Premiere Pro + After Effects', kind: 'panel', key: true, folder: 'Kinetic', win: 'Install Kinetic (Windows).bat', mac: 'Install Kinetic (Mac).command' },
+  ease: { name: 'Kreevo Ease', menu: 'Kreevo Ease', apps: 'After Effects + Premiere Pro', kind: 'panel', key: true, folder: 'KreevoEase', win: 'Install Kreevo Ease (Windows).bat', mac: 'Install Kreevo Ease (Mac).command' },
+  voice:{ name: 'Kreevo Voice', menu: 'Kreevo Voice', apps: 'Premiere Pro (audio effect) + After Effects', kind: 'voice', key: true, folder: 'KreevoVoice', win: 'Install Kreevo Voice (Windows).bat', mac: 'Install Kreevo Voice (Mac).command' },
+  cs:   { name: 'CreatorStash', menu: 'CreatorStash by Kreevo', apps: 'After Effects + Premiere Pro', kind: 'panel', key: true, folder: 'CreatorStash', win: 'Install-Windows.bat', mac: 'Install-Mac.command' },
+  cg:   { name: 'Crash Guard', menu: 'CrashGuard.jsx', apps: 'After Effects', kind: 'script', key: false },
+  sfx:  { name: 'Ultimate SFX Pack', apps: 'any editor', kind: 'files', key: false },
+  lite: { name: 'MotionType Lite', menu: 'MotionType Lite by Kreevo', apps: 'After Effects', kind: 'panel', key: false, folder: 'MotionTypeLite', win: 'Install MotionType Lite (Windows).bat', mac: 'Install MotionType Lite (Mac).command' }
+};
+var ctx = { tool: null, os: null, after: null, trail: [] };
+function T() { return TOOLS[ctx.tool] || {}; }
+function W() { return ctx.os === 'win'; }
+function cmd(s) { return '<pre>' + esc(s) + '</pre><button class="copy" type="button" data-copy="' + esc(s) + '">Copy</button>'; }
+function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+var CEP_PATH = function () { return W() ? '%APPDATA%\\Adobe\\CEP\\extensions\\' : '~/Library/Application Support/Adobe/CEP/extensions/'; };
+var DEBUG_CMD = function () {
+  return W() ? 'for %v in (9 10 11 12 13) do reg add "HKCU\\Software\\Adobe\\CSXS.%v" /v PlayerDebugMode /t REG_SZ /d 1 /f'
+             : 'for v in 9 10 11 12 13; do defaults write com.adobe.CSXS.$v PlayerDebugMode 1; done; killall cfprefsd';
+};
+var FIXED = [{ label: '✅ Fixed, thanks!', go: 'done', main: true }];
+function stuck(next) { return { label: next ? '😕 Still not working' : '😕 Still stuck', go: next || 'email' }; }
+
+// ------------------------------------------------------------------ conversation
+var N = {
+  start: {
+    say: function () { return ['<p>Hey Kreever 👋 I\'m the Kreevo Helper.</p><p>Tell me what\'s going on and I\'ll walk you through the fix, step by step.</p>']; },
+    opts: [
+      { label: '📦 Install a tool', go: 'pickTool', set: { after: 'install' } },
+      { label: '👻 I can\'t find the tool in my app', go: 'pickTool', set: { after: 'missing' } },
+      { label: '🔑 License key problem', go: 'key' },
+      { label: '🛠️ It opens, but something\'s wrong', go: 'pickTool', set: { after: 'use' } },
+      { label: '⬇️ Download, update or new computer', go: 'dl' },
+      { label: '💬 Something else', go: 'other' }
+    ]
+  },
+  pickTool: {
+    say: function () { return ['<p>Which tool is it?</p>']; },
+    opts: function () {
+      return Object.keys(TOOLS).map(function (k) { return { label: TOOLS[k].name, go: 'pickOS', set: { tool: k } }; });
+    }
+  },
+  pickOS: {
+    say: function () { return ['<p>Nice, <b>' + T().name + '</b>. Are you on Windows or Mac?</p>']; },
+    opts: function () { return [{ label: '🪟 Windows', go: ctx.after, set: { os: 'win' } }, { label: '🍎 Mac', go: ctx.after, set: { os: 'mac' } }]; }
+  },
+
+  // ---------------------------------------------------------------- install
+  install: {
+    say: function () {
+      var t = T();
+      if (t.kind === 'files') return ['<p>Good news: the <b>Ultimate SFX Pack</b> has nothing to install 🎉</p><ol><li>Download the ZIP from your receipt email or your ' + LIB + '.</li><li>' + (W() ? 'Right-click it &gt; <b>Extract All</b>.' : 'Double-click it to unzip.') + ' Keep the folder somewhere safe, like Documents/Kreevo SFX.</li><li>Drag any <code>.wav</code> onto your timeline. Works in Premiere Pro, After Effects, DaVinci Resolve, Final Cut, CapCut and more.</li></ol><div class="tip">Premiere tip: in the Media Browser, right-click the folder &gt; <b>Add to Favorites</b>. All 264 sounds, one click away.</div>'];
+      if (t.kind === 'script') return ['<p>Crash Guard is a script panel, so it installs a little differently:</p><ol><li>Download <code>CrashGuard.jsx</code> from your ' + LIB + '.</li><li>Close After Effects.</li><li>Copy the file into this folder:' + cmd(W() ? 'C:\\Program Files\\Adobe\\Adobe After Effects (version)\\Support Files\\Scripts\\ScriptUI Panels' : '/Applications/Adobe After Effects (version)/Scripts/ScriptUI Panels') + (W() ? 'Windows asks for administrator permission: click <b>Continue</b>.' : 'Your Mac may ask for your password: that\'s normal.') + '</li><li>Open After Effects &gt; <b>Window</b> &gt; scroll to the bottom &gt; <b>CrashGuard.jsx</b>.</li></ol><p>No license key needed. Backups start on their own.</p>'];
+      var s = '<p>Here\'s how to install <b>' + t.name + '</b> on ' + (W() ? 'Windows' : 'Mac') + ':</p><ol>' +
+        '<li>Download the ZIP from your receipt email or your ' + LIB + '.</li>' +
+        '<li><b>Unzip it first.</b> ' + (W() ? 'Right-click the ZIP &gt; <b>Extract All</b> &gt; Extract.' : 'Double-click the ZIP. A normal folder appears next to it.') + '</li>' +
+        '<li>Close After Effects and Premiere Pro.</li>' +
+        '<li>In the unzipped folder, ' + (W() ? 'double-click' : 'right-click') + ' <code>' + esc(W() ? t.win : t.mac) + '</code>' + (W() ? '' : ' &gt; <b>Open</b> &gt; <b>Open</b>') + '. Wait for <b>"Done!"</b>.</li>';
+      if (t.kind === 'voice') s += '<li>' + (W() ? 'It asks once for permission to copy the Premiere plug-in: click <b>Yes</b>.' : 'Enter your Mac password if it asks: it copies the Premiere plug-in.') + '</li>' +
+        '<li><b>Premiere Pro:</b> Effects panel &gt; Audio Effects &gt; <b>Kreevo Voice</b>. Drag it onto an audio clip, then Effect Controls &gt; <b>Edit…</b><br><b>After Effects:</b> Window &gt; Extensions &gt; <b>Kreevo Voice</b>.</li>';
+      else s += '<li>Open ' + (ctx.tool === 'lite' ? 'After Effects' : 'After Effects or Premiere Pro') + ': <b>Window &gt; Extensions &gt; ' + t.menu + '</b>.</li>';
+      if (t.key) s += '<li>' + (ctx.tool === 'cs' ? 'Free sounds work right away. To unlock Premium: Settings (top-right icon) &gt; <b>Have a license key?</b> &gt; paste your key &gt; Activate.' : 'Paste the <b>license key</b> from your Gumroad receipt and click <b>Activate</b>.') + '</li>';
+      s += '</ol>';
+      return [s, '<p>Did it work?</p>'];
+    },
+    opts: function () {
+      var t = T(), o = [{ label: '✅ All set!', go: 'done', main: true }];
+      if (t.kind === 'files') return o.concat([{ label: '😕 The download won\'t open', go: 'dlBroken' }]);
+      if (t.kind === 'script') return o.concat([{ label: '🚫 It won\'t let me copy the file', go: 'cgCopy' }, { label: '👻 It\'s not in the Window menu', go: 'missing' }]);
+      return o.concat([
+        { label: W() ? '🛡️ "Windows protected your PC"' : '🛡️ "Apple could not verify…"', go: 'blocked' },
+        { label: '⚡ A window flashed and closed / "Couldn\'t find the files"', go: 'nofiles' },
+        { label: '👻 Installed, but I can\'t find it', go: 'missing' },
+        { label: '🔑 My key won\'t activate', go: 'key' }
+      ]);
+    }
+  },
+  blocked: {
+    say: function () {
+      if (W()) return ['<p>Totally normal, Kreever. Windows shows that for small independent tools that aren\'t from big companies.</p><ol><li>Click <b>More info</b> (small text under the message).</li><li>Click <b>Run anyway</b>.</li></ol><div class="tip">If your antivirus deleted or blocked the <code>.bat</code> file, allow it in the antivirus, or skip the installer and do the manual install (2 minutes).</div>'];
+      return ['<p>That\'s normal on Mac for tools that aren\'t sold in the App Store. <b>Don\'t move it to the Trash.</b> Pick one:</p><p><b>macOS 15 or newer:</b></p><ol><li>Click <b>Done</b> on the warning.</li><li>Open the <b>Apple menu</b> &gt; <b>System Settings</b> &gt; <b>Privacy &amp; Security</b>.</li><li>Scroll down to <i>"… was blocked"</i> &gt; <b>Open Anyway</b>, enter your password, click Open Anyway again.</li></ol><p><b>macOS 14 or older:</b> right-click the installer &gt; <b>Open</b> &gt; <b>Open</b>.</p><p><b>Works on every Mac:</b> open Terminal (Cmd + Space, type Terminal), type <code>bash</code> and a space, drag the installer into the window, press Enter.</p>'];
+    },
+    opts: function () { return FIXED.concat([stuck('manual')]); }
+  },
+  nofiles: {
+    say: function () {
+      var t = T();
+      return ['<p>That means the installer can\'t see the ' + t.name + ' files next to it. Usually it\'s one of these:</p><ul><li><b>It was opened from inside the ZIP.</b> ' + (W() ? 'Right-click the ZIP &gt; <b>Extract All</b>, open the new folder and run the installer from there.' : 'Double-click the ZIP first, then run the installer from the new folder.') + '</li><li><b>The installer was moved</b> to another folder (like the Desktop). Keep it next to the <code>' + esc(t.folder || '') + '</code> folder it came with.</li><li><b>The download didn\'t finish.</b> Download it again from your ' + LIB + '.</li></ul>'];
+    },
+    opts: function () { return FIXED.concat([stuck('manual')]); }
+  },
+  manual: {
+    say: function () {
+      var t = T();
+      if (t.kind === 'script' || t.kind === 'files') return N.install.say();
+      var folder = t.kind === 'voice' ? 'After Effects/KreevoVoice' : (ctx.tool === 'cs' ? 'the whole unzipped CreatorStash folder (rename it to CreatorStash)' : t.folder);
+      var s = '<p>No problem, we\'ll install it by hand. Takes 2 minutes:</p><ol>' +
+        '<li>Close After Effects and Premiere Pro.</li>' +
+        '<li>Open this folder (create the <code>extensions</code> folder if it\'s missing):' + cmd(CEP_PATH()) +
+        (W() ? 'Paste it into the File Explorer address bar and press Enter.' : 'In Finder: <b>Go &gt; Go to Folder</b>, paste it, press Enter.') + '</li>' +
+        '<li>Copy <b>' + esc(folder) + '</b> from the unzipped download into it.</li>' +
+        '<li>Let Adobe load it. Open ' + (W() ? '<b>Command Prompt</b> (Start menu, type cmd)' : '<b>Terminal</b>') + ', paste this and press Enter:' + cmd(DEBUG_CMD()) + '</li>';
+      if (t.kind === 'voice') s += '<li>Premiere plug-in: copy <code>KreevoVoice.vst3</code> from the <b>Premiere Pro (' + (W() ? 'Windows' : 'Mac') + ')</b> folder into:' + cmd(W() ? 'C:\\Program Files\\Common Files\\VST3' : '~/Library/Audio/Plug-Ins/VST3') + '</li>';
+      s += '<li>Open your app: <b>Window &gt; Extensions &gt; ' + (t.menu || t.name) + '</b>.</li></ol>';
+      return [s];
+    },
+    opts: function () { return FIXED.concat([stuck()]); }
+  },
+  cgCopy: {
+    say: function () {
+      return [W() ? '<p>Program Files is protected, so Windows needs your OK:</p><ol><li>Copy <code>CrashGuard.jsx</code> (Ctrl + C).</li><li>Open the ScriptUI Panels folder and paste (Ctrl + V).</li><li>When Windows says <i>"You\'ll need to provide administrator permission"</i>, click <b>Continue</b>.</li></ol><div class="tip">On a work or school computer without admin rights? Ask your IT person, or use <b>File &gt; Scripts &gt; Run Script File…</b> in After Effects to open it once without installing.</div>'
+        : '<p>Your Mac protects the Applications folder:</p><ol><li>Drag <code>CrashGuard.jsx</code> into the ScriptUI Panels folder.</li><li>When it asks, click <b>Authenticate</b> and enter your Mac password.</li></ol><div class="tip">No admin password? Use <b>File &gt; Scripts &gt; Run Script File…</b> in After Effects to open it once without installing.</div>'];
+    },
+    opts: function () { return FIXED.concat([stuck()]); }
+  },
+
+  // ---------------------------------------------------------------- can't find it
+  missing: {
+    say: function () {
+      var t = T();
+      if (t.kind === 'files') return ['<p>The SFX Pack isn\'t a panel, so it won\'t show up in a menu. It\'s just a folder of <code>.wav</code> sounds: open it and drag any sound onto your timeline 🎧</p>'];
+      if (t.kind === 'script') return ['<p>Let\'s find Crash Guard:</p><ol><li>It lives at the <b>bottom</b> of the <b>Window</b> menu as <b>CrashGuard.jsx</b> (not under Extensions).</li><li>It has to be in <b>ScriptUI Panels</b>, not just <b>Scripts</b>. Check the path:' + cmd(W() ? 'C:\\Program Files\\Adobe\\Adobe After Effects (version)\\Support Files\\Scripts\\ScriptUI Panels' : '/Applications/Adobe After Effects (version)/Scripts/ScriptUI Panels') + '</li><li>Got more than one After Effects version? Put it in the folder of the version you open.</li><li>Restart After Effects completely.</li></ol>'];
+      var s = '<p>Let\'s find it. Check these in order:</p><ol>' +
+        '<li><b>Restart the app completely.</b> ' + (W() ? 'Close it and make sure it\'s gone from the taskbar.' : 'Press <b>Cmd + Q</b>, not just the red dot.') + ' New panels only show up after a restart.</li>' +
+        '<li>Look in <b>Window &gt; Extensions</b>. In the newest Adobe versions it\'s called <b>Window &gt; Extensions (Legacy)</b>. Our panel is there as <b>' + (t.menu || t.name) + '</b>.</li>' +
+        '<li><b>Check your version:</b> After Effects 2019 or newer' + (ctx.tool === 'lite' ? ' (Lite is for After Effects only)' : ', Premiere Pro 2021 or newer') + '. Help &gt; About shows it.</li>' +
+        '<li><b>Run the installer again</b> and wait until it says <b>"Done!"</b>.</li>';
+      if (t.kind === 'voice') s += '<li><b>Premiere:</b> Kreevo Voice is an <b>audio effect</b>, not a panel. Effects panel &gt; Audio Effects. Not there? <b>Preferences &gt; Audio &gt; Audio Plug-In Manager &gt; Scan for Plug-Ins</b>, make sure Kreevo Voice is checked, then restart Premiere.</li>';
+      s += '</ol>';
+      return [s];
+    },
+    opts: function () {
+      var t = T();
+      if (t.kind === 'files') return [{ label: '👍 Got it', go: 'done', main: true }, { label: '🛠️ I have another problem', go: 'start' }];
+      if (t.kind === 'script') return FIXED.concat([{ label: '🚫 It won\'t let me copy the file', go: 'cgCopy' }, stuck()]);
+      return [{ label: '✅ Found it!', go: 'done', main: true }, { label: '⬜ It opens, but it\'s blank / white', go: 'blank' }, stuck('manual')];
+    }
+  },
+  blank: {
+    say: function () {
+      return ['<p>A blank panel is usually an old cached copy. Let\'s clear it:</p><ol><li>Close After Effects and Premiere Pro.</li><li>Delete everything inside this folder (it\'s only a cache, it\'s safe):' + cmd(W() ? '%LOCALAPPDATA%\\Temp\\cep_cache' : '~/Library/Caches/CSXS/cep_cache') + '</li><li>Run the ' + T().name + ' installer again, then open the app.</li></ol><div class="tip">Still blank? Drag the panel to a new spot or make it bigger: some panels need a little room to draw.</div>'];
+    },
+    opts: function () { return FIXED.concat([stuck()]); }
+  },
+
+  // ---------------------------------------------------------------- license
+  key: {
+    say: function () { return ['<p>Let\'s sort out your key 🔑 What\'s happening?</p>']; },
+    opts: [
+      { label: '🔎 Where is my license key?', go: 'keyWhere' },
+      { label: '❌ It says the key is not valid', go: 'keyInvalid' },
+      { label: '💻 "Already active on 3 computers"', go: 'keyLimit' },
+      { label: '🌐 "Couldn\'t reach Gumroad"', go: 'keyNet' },
+      { label: '⏸️ "Refunded" or "paused"', go: 'keyRefund' },
+      { label: '💎 I bought the Bundle: which key?', go: 'keyBundle' }
+    ]
+  },
+  keyWhere: {
+    say: function () { return ['<p>Your key is in two places:</p><ol><li>Your <b>Gumroad receipt email</b> for that tool. Search your inbox for <i>Gumroad</i> or the tool\'s name, and check Spam and Promotions too.</li><li>Your ' + LIB + ': log in with the email you used to buy, open the tool, and the key is right above the download.</li></ol><div class="tip">Crash Guard, the SFX Pack and MotionType Lite don\'t need a key. CreatorStash works for free, the key only unlocks Premium.</div>']; },
+    opts: function () { return [{ label: '✅ Found it!', go: 'done', main: true }, { label: '😕 I can\'t find the email or log in', go: 'email' }]; }
+  },
+  keyInvalid: {
+    say: function () { return ['<p>Let\'s check the usual suspects:</p><ol><li><b>Copy the whole key</b> from your ' + LIB + ' (don\'t type it by hand). No spaces before or after.</li><li><b>Use the key of that tool.</b> A MotionType key won\'t unlock Kinetic, and so on: every tool has its own key.</li><li><b>Bought the Bundle?</b> Open each tool in your library to get its own key.</li><li>You need <b>internet</b> for the first activation.</li></ol>']; },
+    opts: function () { return FIXED.concat([stuck()]); }
+  },
+  keyLimit: {
+    say: function () { return ['<p>Each key works on <b>3 computers</b>. Got a new computer or reinstalled Windows / macOS? No problem, Kreever: we\'ll reset it for you.</p><p>Email us your <b>purchase email</b> and the <b>tool\'s name</b>, and we\'ll free it up, usually within a few hours.</p>']; },
+    opts: function () { return [{ label: '✉️ Email Kreevo to reset it', go: 'email', main: true }]; }
+  },
+  keyNet: {
+    say: function () { return ['<p>Activation needs to talk to Gumroad once. Something is blocking your Adobe app:</p><ol><li>Turn off your <b>VPN or proxy</b> for a minute and try again.</li><li>Allow <b>After Effects / Premiere Pro</b> in your <b>antivirus or firewall</b>.</li><li>On a school, office or café Wi-Fi? Try your <b>phone\'s hotspot</b> just for the activation.</li></ol><p>After it\'s activated, it works offline.</p>']; },
+    opts: function () { return FIXED.concat([stuck()]); }
+  },
+  keyRefund: {
+    say: function () { return ['<p>That message appears when a purchase was <b>refunded or disputed</b>, so Gumroad switched the key off.</p><p>If that\'s a mistake, email us with your purchase email and we\'ll check it right away.</p>']; },
+    opts: function () { return [{ label: '✉️ Email Kreevo', go: 'email', main: true }]; }
+  },
+  keyBundle: {
+    say: function () { return ['<p>The Bundle gives you <b>every tool as its own product</b> in your ' + LIB + ', and <b>each one has its own key</b>.</p><ol><li>Open your library.</li><li>Click a tool (MotionType, Kreevo Titles, Kinetic, CreatorStash…).</li><li>Copy the key shown there and paste it into <b>that</b> tool.</li></ol>']; },
+    opts: function () { return FIXED.concat([stuck()]); }
+  },
+
+  // ---------------------------------------------------------------- using a tool
+  use: {
+    say: function () {
+      var t = ctx.tool, s;
+      if (t === 'mt' || t === 'lite') s = '<p>Quick checklist for ' + T().name + ':</p><ul><li><b>After Effects:</b> open a <b>composition</b> first. Select text layers, or nothing: then <b>Apply</b> creates a new text layer for you.</li>' + (t === 'mt' ? '<li><b>Premiere Pro:</b> open a <b>sequence</b> and put the playhead where you want the text, then <b>Add to timeline</b>. To change clips later, select them and click <b>Update</b>.</li><li><i>"Could not add the template"</i> in Premiere: save, restart Premiere, open your sequence and try again.</li><li>Want plain keyframes? Use <b>Bake to keyframes</b>. Change the <b>MT</b> sliders in Effect Controls any time.</li>' : '<li>In Lite the presets play with fixed settings. That\'s on purpose: speed, direction and more unlock in the full MotionType.</li>') + '<li>Arabic, Hebrew and other right-to-left text: get the latest version from your ' + LIB + '.</li></ul>';
+      else if (t === 'kt') s = '<p>Quick checklist for Kreevo Titles:</p><ul><li>Open a <b>sequence</b> (Premiere) or a <b>composition</b> (After Effects) first.</li><li>Pick a style, type your text, click <b>Add to timeline</b>. It lands at the playhead.</li><li>To change a title: select its clip &gt; <b>Edit selected</b> &gt; change it &gt; <b>Update clip</b>.</li><li>Rendering takes a few seconds for long titles. Let it finish before clicking again.</li></ul>';
+      else if (t === 'kin') s = '<p>Quick checklist for Kinetic:</p><ul><li><b>Select</b> a clip (Premiere) or a layer (After Effects) first, then pick an effect and click <b>Apply</b>.</li><li>Effect too strong? Lower the strength and size, then apply again.</li><li>Applying twice stacks the motion: undo (Ctrl/Cmd + Z) first if you want a fresh start.</li></ul>';
+      else if (t === 'ease') s = '<p>Quick checklist for Kreevo Ease:</p><ul><li>Select <b>at least two keyframes</b> on the same property, then pick a curve and click <b>Apply</b>.</li><li>Panel looks cramped? Dock it <b>wide</b> (about 1000 px) so everything fits side by side.</li><li>In Premiere, select the clip and its keyframes in Effect Controls first.</li></ul>';
+      else if (t === 'voice') s = '<p>Quick checklist for Kreevo Voice:</p><ul><li><b>Premiere:</b> drag Kreevo Voice onto an <b>audio</b> clip, then in Effect Controls click <b>Edit…</b> to open its window and pick a voice.</li><li>Hearing the original voice only? The plug-in isn\'t activated yet: paste your key in its window (or in the After Effects panel) and click Activate.</li><li>Not in the effects list? <b>Preferences &gt; Audio &gt; Audio Plug-In Manager &gt; Scan for Plug-Ins</b>, then restart Premiere.</li></ul>';
+      else if (t === 'cs') s = '<p>Quick checklist for CreatorStash:</p><ul><li>Click a sound to preview it, then add it: it goes on a free audio track at the playhead.</li><li>Some items show a lock? Those are <b>Premium</b>. Settings (top-right icon) &gt; <b>Have a license key?</b> &gt; paste &gt; Activate.</li><li>Text presets: open a sequence / composition first, pick a preset, type your text, add it.</li></ul>';
+      else if (t === 'cg') s = '<p>Quick checklist for Crash Guard:</p><ul><li>Backups not saving? After Effects needs permission: <b>' + (W() ? 'Edit' : 'After Effects') + ' &gt; Settings (Preferences) &gt; Scripting &amp; Expressions &gt; Allow Scripts to Write Files and Access Network</b> ✓</li><li>After a crash: open Crash Guard &gt; <b>Backup</b> &gt; restore the newest one.</li><li>Unsaved (Untitled) project? Use <b>Show backup folder</b>, then File &gt; Save As to move it anywhere.</li></ul>';
+      else s = '<p>Quick checklist for the SFX Pack:</p><ul><li>Unzip it first: editors can\'t read sounds inside a ZIP.</li><li>Every sound is a <code>.wav</code>: drag it onto your timeline.</li><li>Editing on your phone (CapCut)? Copy the sounds you need to your phone, then import them as audio.</li><li>Looking for a sound? Open <b>Sound List.pdf</b> in the pack: every sound by category.</li></ul>';
+      return [s];
+    },
+    opts: function () { return FIXED.concat([stuck()]); }
+  },
+
+  // ---------------------------------------------------------------- download / update
+  dl: {
+    say: function () { return ['<p>Sure thing. Which one?</p>']; },
+    opts: [
+      { label: '🔎 I can\'t find my download', go: 'dlFind' },
+      { label: '🔄 How do I update?', go: 'dlUpdate' },
+      { label: '💻 I have a new computer', go: 'dlNew' },
+      { label: '📱 I bought it on my phone', go: 'dlPhone' },
+      { label: '🧩 The download won\'t open', go: 'dlBroken' }
+    ]
+  },
+  dlFind: {
+    say: function () { return ['<p>Everything you bought is always in your ' + LIB + '. Log in with the <b>same email</b> you used to buy (Gumroad can email you a login link). Your receipt email has a download button too.</p>']; },
+    opts: function () { return FIXED.concat([stuck()]); }
+  },
+  dlUpdate: {
+    say: function () { return ['<p>Updates are free forever 🎁</p><ol><li>Download the tool again from your ' + LIB + '. It\'s always the newest version.</li><li>Unzip it and run the installer. It replaces the old version.</li><li>Your key stays activated, nothing to re-enter.</li></ol>']; },
+    opts: function () { return FIXED.concat([stuck()]); }
+  },
+  dlNew: {
+    say: function () { return ['<p>Welcome to the new setup, Kreever 💻</p><ol><li>Download the tools from your ' + LIB + ' on the new computer and install them as usual.</li><li>Activate with the same key. Each key works on <b>3 computers</b>.</li><li>Already used all 3? Email us and we\'ll free up the old ones.</li></ol>']; },
+    opts: function () { return FIXED.concat([{ label: '✉️ I need a key reset', go: 'email' }]); }
+  },
+  dlPhone: {
+    say: function () { return ['<p>No problem. Our tools run on a computer, so:</p><ol><li>On your computer, open your ' + LIB + '.</li><li>Log in with the email you used on your phone.</li><li>Download and install from there.</li></ol><p>The SFX Pack is the only one that also works on phones, in apps like CapCut.</p>']; },
+    opts: function () { return FIXED.concat([stuck()]); }
+  },
+  dlBroken: {
+    say: function () { return ['<p>Usually the download didn\'t finish. Try this:</p><ol><li>Download it again from your ' + LIB + ' on a <b>computer</b>, not a phone.</li><li>Wait until the download is 100% done (the SFX Pack is big).</li><li>' + (W() ? 'Right-click the ZIP &gt; <b>Extract All</b>.' : 'Double-click the ZIP.') + ' If it still says it\'s damaged, try another browser (Chrome or Edge / Safari).</li></ol>']; },
+    opts: function () { return FIXED.concat([stuck()]); }
+  },
+
+  // ---------------------------------------------------------------- other
+  other: {
+    say: function () { return ['<p>Tell me a bit more:</p>']; },
+    opts: [
+      { label: '🤔 Which tool should I get?', go: 'whichTool' },
+      { label: '💡 I have an idea or found a bug', go: 'email', set: { tool: null } },
+      { label: '💸 Refund question', go: 'email', set: { tool: null } },
+      { label: '🙋 I want to talk to a human', go: 'email', set: { tool: null } }
+    ]
+  },
+  whichTool: {
+    say: function () { return ['<p>Here\'s the quick version:</p><ul><li><b>Text animations in one click:</b> MotionType</li><li><b>Ready-made titles &amp; captions:</b> Kreevo Titles</li><li><b>Shake, wiggle, bounce on clips:</b> Kinetic</li><li><b>Smooth keyframes:</b> Kreevo Ease</li><li><b>Voice changer:</b> Kreevo Voice</li><li><b>Sounds inside your app:</b> CreatorStash · <b>264 sounds for any editor:</b> SFX Pack</li><li><b>Never lose a project:</b> Crash Guard</li></ul><p>Want it all? The <a href="https://kreevo.gumroad.com/l/bundle" target="_blank" rel="noopener"><b>Kreevo Bundle</b></a> saves you more than half. Or try <a href="https://kreevo.gumroad.com/l/motiontypelite" target="_blank" rel="noopener">MotionType Lite</a> for free first.</p>']; },
+    opts: [{ label: '👍 Thanks!', go: 'done', main: true }, { label: '↩ Something else', go: 'start' }]
+  },
+
+  // ---------------------------------------------------------------- endings
+  done: {
+    say: function () { return ['<p>Let\'s gooo 🎉 Happy editing, Kreever!</p><p>Made something cool with it? Tag <a href="https://www.instagram.com/kreevo.assets/" target="_blank" rel="noopener">@kreevo.assets</a>, we love sharing Kreevers\' edits. And if the tool helps you, a quick rating in your ' + LIB + ' means a lot to us ⭐</p>']; },
+    opts: [{ label: '🛠️ I have another question', go: 'start' }]
+  },
+  email: {
+    say: function () { return ['<p>We\'ll fix it with you, Kreever 🤝 A real person from Kreevo answers within 24 hours.</p><p>Tap below: the email is pre-filled with what you told me. Just add a <b>screenshot</b> of what you see' + (ctx.tool && TOOLS[ctx.tool].kind !== 'files' ? ' and your <b>After Effects / Premiere version</b> (Help &gt; About)' : '') + '.</p>']; },
+    opts: function () { return [{ label: '✉️ Email Kreevo', href: mailLink(), main: true }, { label: '↩ Start over', go: 'start' }]; }
+  }
+};
+
+function mailLink() {
+  var t = ctx.tool ? TOOLS[ctx.tool].name : 'Kreevo';
+  var os = ctx.os === 'win' ? 'Windows' : ctx.os === 'mac' ? 'Mac' : '';
+  var subj = 'Help: ' + t + (os ? ' on ' + os : '');
+  var body = 'Hi Kreevo,\n\nI need help with ' + t + (os ? ' on ' + os : '') + '.\n\nWhat I tried in the Kreevo Helper:\n- ' + ctx.trail.join('\n- ') +
+    '\n\nMy After Effects / Premiere version: \nPurchase email: \n\n(Screenshot attached)\n';
+  return 'mailto:' + MAIL + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body);
+}
+
+// ------------------------------------------------------------------ engine
+var chat = document.getElementById('chat'), optsEl = document.getElementById('opts');
+var stack = [];   // history of {node, ctx snapshot, html length}
+function snapshot() { return JSON.parse(JSON.stringify(ctx)); }
+function add(cls, html) { var d = document.createElement('div'); d.className = 'msg ' + cls; d.innerHTML = html; chat.appendChild(d); return d; }
+function scroll() { window.scrollTo({ top: document.body.scrollHeight, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }
+var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function show(id, userLabel) {
+  var node = N[id];
+  optsEl.innerHTML = '';
+  if (userLabel) add('me', esc(userLabel));
+  stack.push({ id: id, ctx: snapshot(), n: chat.children.length });
+  document.getElementById('back').disabled = stack.length < 2;
+  var parts = node.say(), i = 0;
+  (function next() {
+    if (i >= parts.length) { renderOpts(node); scroll(); return; }
+    var typing = document.createElement('div'); typing.className = 'typing'; typing.innerHTML = '<i></i><i></i><i></i>';
+    chat.appendChild(typing); scroll();
+    setTimeout(function () { typing.remove(); add('bot', parts[i++]); scroll(); next(); }, reduce ? 0 : (i === 0 ? 420 : 520));
+  })();
+}
+function renderOpts(node) {
+  var list = typeof node.opts === 'function' ? node.opts() : node.opts;
+  optsEl.innerHTML = '';
+  list.forEach(function (o) {
+    var b;
+    if (o.href) { b = document.createElement('a'); b.href = o.href; b.className = 'opt mail'; }
+    else { b = document.createElement('button'); b.type = 'button'; b.className = 'opt' + (o.main ? ' main' : ''); }
+    b.textContent = o.label;
+    if (!o.href) b.onclick = function () {
+      if (o.set) for (var k in o.set) ctx[k] = o.set[k];
+      ctx.trail.push(o.label.replace(/^[^\w"]+\s*/, ''));
+      show(o.go, o.label);
+    };
+    optsEl.appendChild(b);
+  });
+}
+document.getElementById('back').onclick = function () {
+  if (stack.length < 2) return;
+  stack.pop(); var prev = stack.pop();
+  while (chat.children.length > prev.n) chat.lastChild.remove();
+  ctx = prev.ctx; show(prev.id);
+};
+document.getElementById('restart').onclick = function () {
+  chat.innerHTML = ''; stack = []; ctx = { tool: null, os: null, after: null, trail: [] }; show('start');
+};
+chat.addEventListener('click', function (e) {
+  var b = e.target.closest('.copy'); if (!b) return;
+  var text = b.getAttribute('data-copy');
+  function ok() { b.textContent = 'Copied ✓'; setTimeout(function () { b.textContent = 'Copy'; }, 1500); }
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(ok, function () {}); else ok();
+});
+// deep link: /help/?tool=mt&os=win&q=missing
+(function () {
+  var p = new URLSearchParams(location.search);
+  if (TOOLS[p.get('tool')]) ctx.tool = p.get('tool');
+  if (/^(win|mac)$/.test(p.get('os') || '')) ctx.os = p.get('os');
+  var q = p.get('q');
+  if (q && N[q] && (ctx.tool || !/install|missing|use|manual|blank|nofiles|blocked/.test(q))) {
+    if (!ctx.os && /install|missing|use|manual|blank|nofiles|blocked/.test(q)) { ctx.after = q; show('pickOS'); return; }
+    show(q); return;
+  }
+  show('start');
+})();
+</script>
+</body>
+</html>
