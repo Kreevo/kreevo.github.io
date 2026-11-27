@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Start here: install your Kreevo tools</title>
+<meta name="description" content="How to install and activate every Kreevo tool in After Effects and Premiere Pro, on Windows and Mac.">
+<link rel="icon" type="image/png" href="../assets/brand/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #0b0b0d; --card: #141418; --card2: #1a1a20; --ink: #e9e9f3; --mute: #9a9aa8; --line: rgba(255,255,255,.1); --accent: #7678ff; --green: #38d98a; --warn: #ffb547; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.65 'DM Sans', system-ui, sans-serif; }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 40px 16px 80px; }
+  a { color: #a9abff; }
+  .logo { font: 900 26px/1 Montserrat, sans-serif; color: #fff; text-decoration: none; }
+  .logo span { color: #ff6228; }
+  h1 { font: 900 clamp(32px, 7vw, 46px)/1.08 Montserrat, sans-serif; letter-spacing: -1px; margin: 36px 0 10px; }
+  h2 { font: 800 22px/1.3 Montserrat, sans-serif; margin: 44px 0 12px; }
+  h3 { font: 800 18px/1.3 Montserrat, sans-serif; margin: 0; }
+  .lead { color: var(--mute); font-size: 18px; margin: 0 0 24px; }
+  code, kbd { font: 500 14px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--card2); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; color: #fff; overflow-wrap: anywhere; }
+  .os { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); position: sticky; top: 10px; z-index: 5; }
+  .os button { font: 700 15px/1 'DM Sans', sans-serif; color: var(--mute); background: none; border: 0; border-radius: 999px; padding: 10px 20px; cursor: pointer; }
+  .os button.on { background: var(--accent); color: #fff; }
+  body[data-os="win"] .mac, body[data-os="mac"] .win { display: none !important; }
+  .steps { list-style: none; counter-reset: s; padding: 0; margin: 20px 0 0; display: grid; gap: 12px; }
+  .steps > li { counter-increment: s; position: relative; padding: 16px 18px 16px 62px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
+  .steps > li::before { content: counter(s); position: absolute; left: 16px; top: 14px; width: 32px; height: 32px; border-radius: 10px; background: var(--accent); color: #fff; font: 900 16px/32px Montserrat, sans-serif; text-align: center; }
+  .steps b { color: #fff; }
+  .note { color: var(--mute); font-size: 14.5px; display: block; margin-top: 4px; }
+  .warn { border-left: 3px solid var(--warn); background: rgba(255,181,71,.07); padding: 12px 16px; border-radius: 0 12px 12px 0; margin: 14px 0 0; font-size: 15px; }
+  .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+  .toc a { text-decoration: none; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; font-size: 14.5px; }
+  .toc a:hover { border-color: var(--accent); }
+  .prod { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; margin: 12px 0; scroll-margin-top: 70px; }
+  .prod .apps { color: var(--mute); font-size: 14px; margin: 2px 0 10px; }
+  .prod dl { margin: 0; display: grid; grid-template-columns: 110px 1fr; gap: 8px 14px; font-size: 15px; }
+  .prod dt { color: var(--mute); }
+  .prod dd { margin: 0; }
+  @media (max-width: 520px) { .prod dl { grid-template-columns: 1fr; gap: 2px; } .prod dd { margin-bottom: 8px; } }
+  details { background: var(--card); border: 1px solid var(--line); border-radius: 14px; margin: 10px 0; }
+  summary { cursor: pointer; padding: 14px 18px; font-weight: 700; color: #fff; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; float: right; color: var(--mute); font-weight: 400; }
+  details[open] summary::after { content: "–"; }
+  details > div { padding: 0 18px 16px; font-size: 15.5px; }
+  details ol, details ul { padding-left: 20px; margin: 6px 0; }
+  .help { margin-top: 44px; padding: 24px; border-radius: 20px; background: linear-gradient(135deg, rgba(118,120,255,.16), rgba(56,217,138,.08)); border: 1px solid rgba(118,120,255,.35); }
+  .btn { display: inline-block; margin-top: 10px; background: #fff; color: #111; text-decoration: none; font-weight: 700; padding: 12px 22px; border-radius: 999px; }
+  footer { margin-top: 40px; color: var(--mute); font-size: 14px; }
+</style>
+</head>
+<body data-os="win">
+<div class="wrap">
+  <a class="logo" href="../">kreevo<span>.</span></a>
+  <h1>Start here 👋<br>Install your Kreevo tools</h1>
+  <p class="lead">Thanks for being a Kreever! Every tool installs in about a minute. Pick your computer:</p>
+
+  <div class="os" role="tablist">
+    <button type="button" data-os="win" class="on">Windows</button>
+    <button type="button" data-os="mac">Mac</button>
+  </div>
+
+  <h2>Install any Kreevo panel in 5 steps</h2>
+  <p style="margin:0;color:var(--mute)">MotionType, Kreevo Titles, Kinetic, Kreevo Ease, Kreevo Voice, CreatorStash and MotionType Lite all install the same way. Crash Guard and the SFX Pack are different, see below.</p>
+  <ol class="steps">
+    <li><b>Download the ZIP</b> from your Gumroad receipt email, or from your <a href="https://app.gumroad.com/library">Gumroad library</a>.
+      <span class="note">Bought the Bundle? Each tool is its own product in your library, with its own download and license key.</span></li>
+    <li><b>Unzip it first.</b>
+      <span class="win">Right-click the ZIP &gt; <b>Extract All</b> &gt; Extract.</span>
+      <span class="mac">Double-click the ZIP. A normal folder appears next to it.</span>
+      <span class="note">Don't run anything from inside the ZIP preview, it won't work.</span></li>
+    <li><b>Close After Effects and Premiere Pro.</b></li>
+    <li><b>Run the installer</b> inside the folder.
+      <span class="win">Double-click the file that ends in <code>(Windows).bat</code>, for example <code>Install MotionType (Windows).bat</code>. A black window opens, copies the files and says it's done.</span>
+      <span class="mac">Right-click the file that ends in <code>(Mac).command</code>, for example <code>Install MotionType (Mac).command</code>, then <b>Open</b> &gt; <b>Open</b>.</span>
+      <div class="warn win"><b>"Windows protected your PC"?</b> That's normal for small independent tools. Click <b>More info</b> &gt; <b>Run anyway</b>.</div>
+      <div class="warn mac"><b>"Apple could not verify…"?</b> Don't move it to the Trash. Click <b>Done</b>, open <b>System Settings &gt; Privacy &amp; Security</b>, scroll down and click <b>Open Anyway</b>. <a href="#mac-blocked">Other ways</a></div></li>
+    <li><b>Open the panel and activate.</b> Start After Effects or Premiere Pro, then <b>Window &gt; Extensions &gt;</b> the tool's name. Paste the <b>license key</b> from your Gumroad receipt and click <b>Activate</b>.
+      <span class="note">One key works on 3 computers. It needs internet once, then works offline.</span></li>
+  </ol>
+
+  <h2>Find your tool</h2>
+  <div class="toc">
+    <a href="#motiontype">MotionType</a><a href="#titles">Kreevo Titles</a><a href="#kinetic">Kinetic</a><a href="#ease">Kreevo Ease</a><a href="#voice">Kreevo Voice</a><a href="#creatorstash">CreatorStash</a><a href="#crashguard">Crash Guard</a><a href="#sfx">SFX Pack</a><a href="#lite">MotionType Lite</a>
+  </div>
+
+  <div class="prod" id="motiontype">
+    <h3>🎬 MotionType</h3><div class="apps">After Effects + Premiere Pro</div>
+    <dl>
+      <dt>Installer</dt><dd><code class="win">Install MotionType (Windows).bat</code><code class="mac">Install MotionType (Mac).command</code></dd>
+      <dt>Open</dt><dd>Window &gt; Extensions &gt; <b>MotionType by Kreevo</b></dd>
+      <dt>Use</dt><dd>Select a text layer (or nothing, to create a new one), pick a preset, click <b>Apply</b>. In Premiere Pro, click <b>Add to timeline</b>.</dd>
+      <dt>Extra</dt><dd>Prefer plain Premiere templates? Download "MotionType for Premiere Pro" from the same page and install the .mogrt files: Window &gt; Graphics Templates.</dd>
+    </dl>
+  </div>
+  <div class="prod" id="titles">
+    <h3>✨ Kreevo Titles</h3><div class="apps">Premiere Pro + After Effects</div>
+    <dl>
+      <dt>Installer</dt><dd><code class="win">Install Kreevo Titles (Windows).bat</code><code class="mac">Install Kreevo Titles (Mac).command</code></dd>
+      <dt>Open</dt><dd>Window &gt; Extensions &gt; <b>Kreevo Titles</b></dd>
+      <dt>Use</dt><dd>Pick a style, type your text, click <b>Add to timeline</b>. To change it later: select the clip &gt; <b>Edit selected</b> &gt; <b>Update clip</b>.</dd>
+    </dl>
+  </div>
+  <div class="prod" id="kinetic">
+    <h3>🌀 Kinetic</h3><div class="apps">Premiere Pro + After Effects</div>
+    <dl>
+      <dt>Installer</dt><dd><code class="win">Install Kinetic (Windows).bat</code><code class="mac">Install Kinetic (Mac).command</code></dd>
+      <dt>Open</dt><dd>Window &gt; Extensions &gt; <b>Kinetic by Kreevo</b></dd>
+      <dt>Use</dt><dd>Select a clip or layer, pick an effect (wiggle, shake, bounce, pulse…), click <b>Apply</b>.</dd>
+    </dl>
+  </div>
+  <div class="prod" id="ease">
+    <h3>📈 Kreevo Ease</h3><div class="apps">After Effects + Premiere Pro</div>
+    <dl>
+      <dt>Installer</dt><dd><code class="win">Install Kreevo Ease (Windows).bat</code><code class="mac">Install Kreevo Ease (Mac).command</code></dd>
+      <dt>Open</dt><dd>Window &gt; Extensions &gt; <b>Kreevo Ease</b></dd>
+      <dt>Use</dt><dd>Select keyframes, pick a curve, click <b>Apply</b>. Tip: dock the panel wide (about 1000 px) so everything fits.</dd>
+    </dl>
+  </div>
+  <div class="prod" id="voice">
+    <h3>🎙️ Kreevo Voice</h3><div class="apps">Premiere Pro (audio effect) + After Effects (panel)</div>
+    <dl>
+      <dt>Installer</dt><dd><code class="win">Install Kreevo Voice (Windows).bat</code><code class="mac">Install Kreevo Voice (Mac).command</code> <span class="note win">It asks once for permission to copy the Premiere plug-in: click <b>Yes</b>.</span></dd>
+      <dt>Premiere Pro</dt><dd>Effects panel &gt; Audio Effects &gt; <b>Kreevo Voice</b>. Drag it onto an audio clip, then Effect Controls &gt; <b>Edit…</b></dd>
+      <dt>After Effects</dt><dd>Window &gt; Extensions &gt; <b>Kreevo Voice</b></dd>
+      <dt>Activate</dt><dd>Once, in either app. Both unlock on that computer.</dd>
+    </dl>
+  </div>
+  <div class="prod" id="creatorstash">
+    <h3>⚡ CreatorStash</h3><div class="apps">After Effects + Premiere Pro</div>
+    <dl>
+      <dt>Installer</dt><dd><code class="win">Install-Windows.bat</code><code class="mac">Install-Mac.command</code></dd>
+      <dt>Open</dt><dd>Window &gt; Extensions &gt; <b>CreatorStash by Kreevo</b></dd>
+      <dt>Activate</dt><dd>Settings (top-right icon) &gt; <b>Have a license key?</b> &gt; paste the key &gt; Activate.</dd>
+    </dl>
+  </div>
+  <div class="prod" id="crashguard">
+    <h3>🛡️ Crash Guard</h3><div class="apps">After Effects · no license key needed</div>
+    <dl>
+      <dt>File</dt><dd><code>CrashGuard.jsx</code></dd>
+      <dt>Install</dt><dd>Copy it into After Effects' <b>ScriptUI Panels</b> folder:<br>
+        <code class="win">C:\Program Files\Adobe\Adobe After Effects (version)\Support Files\Scripts\ScriptUI Panels</code>
+        <code class="mac">Applications/Adobe After Effects (version)/Scripts/ScriptUI Panels</code>
+        <span class="note win">Windows asks for administrator permission to copy into Program Files: click <b>Continue</b>.</span></dd>
+      <dt>Open</dt><dd>Restart After Effects &gt; Window &gt; <b>CrashGuard.jsx</b>. Backups start automatically.</dd>
+    </dl>
+  </div>
+  <div class="prod" id="sfx">
+    <h3>🔊 Ultimate SFX Pack</h3><div class="apps">Any editor · nothing to install</div>
+    <dl>
+      <dt>Use</dt><dd>Unzip the pack anywhere (for example Documents/Kreevo SFX) and drag any .wav onto your timeline. Works in Premiere Pro, After Effects, DaVinci Resolve, Final Cut, CapCut and more.</dd>
+      <dt>Tip</dt><dd>In Premiere Pro, add the folder to Media Browser favorites so every sound is one click away.</dd>
+    </dl>
+  </div>
+  <div class="prod" id="lite">
+    <h3>🎁 MotionType Lite (free)</h3><div class="apps">After Effects · no license key needed</div>
+    <dl>
+      <dt>Installer</dt><dd><code class="win">Install MotionType Lite (Windows).bat</code><code class="mac">Install MotionType Lite (Mac).command</code></dd>
+      <dt>Open</dt><dd>Window &gt; Extensions &gt; <b>MotionType Lite by Kreevo</b></dd>
+      <dt>Upgrade</dt><dd>Want all 26 presets, sound effects and Premiere Pro? <a href="https://kreevo.gumroad.com/l/motiontype">Get MotionType</a></dd>
+    </dl>
+  </div>
+
+  <h2>Something not working?</h2>
+
+  <details id="no-panel"><summary>I don't see the tool in Window &gt; Extensions</summary><div>
+    <ol>
+      <li>Fully quit After Effects / Premiere Pro and open it again. New panels only appear after a restart.</li>
+      <li>Make sure you ran the installer from the <b>unzipped folder</b>, not from inside the ZIP.</li>
+      <li>Run the installer once more and wait until the window says it's done.</li>
+      <li>Kreevo Voice in Premiere: Preferences &gt; Audio &gt; <b>Audio Plug-In Manager</b> &gt; <b>Scan for Plug-Ins</b>, then restart Premiere.</li>
+      <li>Still missing? Do the manual install below.</li>
+    </ol>
+  </div></details>
+
+  <details id="manual"><summary>Manual install (if the installer doesn't work)</summary><div>
+    <ol>
+      <li>Copy the tool's folder (for example <code>MotionType</code>) into:<br>
+        <code class="win">%APPDATA%\Adobe\CEP\extensions\</code><code class="mac">~/Library/Application Support/Adobe/CEP/extensions/</code>
+        <span class="note win">Paste that path into the File Explorer address bar and press Enter. Create the <code>extensions</code> folder if it's missing.</span>
+        <span class="note mac">In Finder: Go &gt; Go to Folder, paste the path, press Enter. Create the <code>extensions</code> folder if it's missing.</span></li>
+      <li>Allow Adobe to load it. Open
+        <span class="win"><b>Command Prompt</b> and paste:<br><code>for %v in (9 10 11 12 13) do reg add "HKCU\Software\Adobe\CSXS.%v" /v PlayerDebugMode /t REG_SZ /d 1 /f</code></span>
+        <span class="mac"><b>Terminal</b> and paste:<br><code>for v in 9 10 11 12 13; do defaults write com.adobe.CSXS.$v PlayerDebugMode 1; done; killall cfprefsd</code></span></li>
+      <li>Restart After Effects / Premiere Pro.</li>
+    </ol>
+  </div></details>
+
+  <details id="mac-blocked"><summary>Mac: "Apple could not verify…" or "can't be opened"</summary><div>
+    <p style="margin-top:0">This is normal for small tools that aren't sold through the Mac App Store. Don't move the file to the Trash. Use one of these:</p>
+    <ul>
+      <li><b>macOS 15 or newer:</b> double-click the installer, click <b>Done</b>, then System Settings &gt; Privacy &amp; Security &gt; scroll down &gt; <b>Open Anyway</b>, enter your password, click Open Anyway again.</li>
+      <li><b>macOS 14 or older:</b> right-click the installer &gt; <b>Open</b> &gt; <b>Open</b>.</li>
+      <li><b>Works everywhere:</b> open Terminal, type <code>bash</code> and a space, drag the installer into the window, press Enter.</li>
+    </ul>
+  </div></details>
+
+  <details id="key"><summary>Where is my license key?</summary><div>
+    <ul>
+      <li>In your <b>Gumroad receipt email</b> for that product.</li>
+      <li>Or open your <a href="https://app.gumroad.com/library">Gumroad library</a>, click the product: the key is shown above the download.</li>
+      <li>Bought the Bundle? Every tool has <b>its own key</b>. Open each tool in your library to see it.</li>
+      <li>Crash Guard, the SFX Pack and MotionType Lite don't need a key.</li>
+    </ul>
+  </div></details>
+
+  <details id="key-error"><summary>My key doesn't activate</summary><div>
+    <ul>
+      <li>Copy the whole key, without spaces before or after it.</li>
+      <li>Use the key of <b>that</b> tool. A MotionType key won't unlock Kinetic.</li>
+      <li>You need internet for the first activation.</li>
+      <li>One key works on 3 computers. Moving to a new computer? Email us and we'll reset it.</li>
+    </ul>
+  </div></details>
+
+  <details id="versions"><summary>Which versions are supported?</summary><div>
+    <p style="margin:0">After Effects CC 2019 or newer and Premiere Pro 2021 or newer (2026 included), on Windows 10/11 and macOS.</p>
+  </div></details>
+
+  <div class="help">
+    <h3>Still stuck? We'll fix it with you.</h3>
+    <p style="margin:6px 0 0">Email us a <b>screenshot</b>, the <b>tool's name</b> and your <b>After Effects / Premiere version</b>. We reply within 24 hours.</p>
+    <a class="btn" href="mailto:kreevoassets@gmail.com?subject=Install%20help">Email kreevoassets@gmail.com</a>
+  </div>
+
+  <footer>Made for Kreevers ⚡ · <a href="../">kreevo.github.io</a> · Instagram <a href="https://www.instagram.com/kreevo.assets/">@kreevo.assets</a></footer>
+</div>
+<script>
+(function () {
+  function set(os) {
+    document.body.setAttribute('data-os', os);
+    var b = document.querySelectorAll('.os button');
+    for (var i = 0; i < b.length; i++) b[i].classList.toggle('on', b[i].getAttribute('data-os') === os);
+    try { localStorage.setItem('kreevo-os', os); } catch (e) {}
+  }
+  var saved = null; try { saved = localStorage.getItem('kreevo-os'); } catch (e) {}
+  var q = (location.search.match(/[?&]os=(win|mac)/) || [])[1];
+  set(q || saved || (/Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent) ? 'mac' : 'win'));
+  var b = document.querySelectorAll('.os button');
+  for (var i = 0; i < b.length; i++) b[i].onclick = function () { set(this.getAttribute('data-os')); };
+})();
+</script>
+</body>
+</html>
