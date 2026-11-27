@@ -341,6 +341,7 @@ function scroll() { window.scrollTo({ top: document.body.scrollHeight, behavior:
 var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function show(id, userLabel) {
+  if (id === 'pickTool' && ctx.fixedTool && ctx.tool) id = ctx.os ? ctx.after : 'pickOS';   // opened from a product's page
   var node = N[id];
   optsEl.innerHTML = '';
   if (userLabel) add('me', esc(userLabel));
@@ -388,7 +389,7 @@ chat.addEventListener('click', function (e) {
 // deep link: /help/?tool=mt&os=win&q=missing
 (function () {
   var p = new URLSearchParams(location.search);
-  if (TOOLS[p.get('tool')]) ctx.tool = p.get('tool');
+  if (TOOLS[p.get('tool')]) { ctx.tool = p.get('tool'); ctx.fixedTool = true; }
   if (/^(win|mac)$/.test(p.get('os') || '')) ctx.os = p.get('os');
   var q = p.get('q');
   if (q && N[q] && (ctx.tool || !/install|missing|use|manual|blank|nofiles|blocked/.test(q))) {
