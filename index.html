@@ -1256,5 +1256,36 @@ window.addEventListener('scroll', () => {
 })();
 </script>
 <script src="https://gumroad.com/js/gumroad.js"></script>
+
+<!-- Black Friday 2026: quiet -20% (Gumroad code BLACKFRIDAY, auto-applied, universal). Switches itself off after Dec 1 23:59 ET. -->
+<style>
+  .bf-old { opacity: .45; font-weight: 600; margin-right: 4px; }
+  .bf-tag { font-style: normal !important; display: inline-block; vertical-align: middle; margin-left: 6px; font: 700 10.5px/1 'DM Sans', sans-serif; letter-spacing: .04em; text-transform: uppercase; color: #fff !important; background: #141414; border-radius: 999px; padding: 4px 8px; }
+</style>
+<script>
+(function () {
+  var END = Date.parse('2026-12-02T04:59:00Z');
+  if (Date.now() > END) return;
+  function bf(txt) { var c = Math.round(parseFloat(txt) * 100 * 0.8); return (c / 100).toFixed(2); }
+  // product cards
+  document.querySelectorAll('.product-price').forEach(function (el) {
+    var n = el.firstChild; if (!n || n.nodeType !== 3) return;
+    var m = n.nodeValue.match(/\$(\d+\.\d\d)/); if (!m) return;
+    var wrap = document.createElement('b'); wrap.style.font = 'inherit'; wrap.style.color = 'inherit';
+    wrap.innerHTML = '<s class="bf-old">$' + m[1] + '</s>$' + bf(m[1]) + ' ';
+    el.replaceChild(wrap, n);
+    var olds = el.querySelectorAll('span s'); for (var i = 0; i < olds.length; i++) olds[i].remove();   // Bundle: one crossed-out price is enough
+    var tag = document.createElement('em'); tag.className = 'bf-tag'; tag.textContent = 'Black Friday';
+    el.appendChild(tag);
+  });
+  // buy buttons that show a price (not the LAUNCH code button)
+  document.querySelectorAll('a[data-gumroad-overlay-checkout]').forEach(function (a) {
+    if (/\/LAUNCH/i.test(a.href) || a.querySelector('s')) return;
+    a.textContent = a.textContent.replace(/\$(\d+\.\d\d)/, function (_, v) { return '$' + bf(v); });
+  });
+  // product pop-ups
+  try { Object.keys(products).forEach(function (k) { var p = products[k], m = /^\$(\d+\.\d\d)$/.exec(p.price || ''); if (m) p.price = '<s class="bf-old">$' + m[1] + '</s>$' + bf(m[1]); }); } catch (e) {}
+})();
+</script>
 </body>
 </html>
